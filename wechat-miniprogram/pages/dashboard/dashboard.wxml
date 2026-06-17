@@ -1,0 +1,25 @@
+<view class="card">
+  <view class="title">用户活跃度</view>
+  <view class="metric">
+    <text>近 7 日活跃用户</text>
+    <text class="num">{{metrics.dau7}}</text>
+  </view>
+  <view class="metric">
+    <text>今日事件数</text>
+    <text class="num">{{metrics.todayEvents}}</text>
+  </view>
+  <view class="metric">
+    <text>完成单词数</text>
+    <text class="num">{{metrics.wordComplete}}</text>
+  </view>
+</view>
+
+<view class="card">
+  <view class="title">事件分布</view>
+  <block wx:for="{{events}}" wx:key="type">
+    <view class="event-row">
+      <text>{{item.type}}</text>
+      <text>{{item.count}}</text>
+    </view>
+  </block>
+</view>

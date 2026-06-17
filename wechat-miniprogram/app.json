@@ -1,0 +1,30 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/study/study",
+    "pages/dashboard/dashboard"
+  ],
+  "window": {
+    "navigationBarTitleText": "超级单词表",
+    "navigationBarBackgroundColor": "#8f75e6",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f7f3ff"
+  },
+  "tabBar": {
+    "color": "#797285",
+    "selectedColor": "#6d53bf",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "学习"
+      },
+      {
+        "pagePath": "pages/dashboard/dashboard",
+        "text": "数据"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

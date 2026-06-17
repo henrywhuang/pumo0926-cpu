@@ -1,0 +1,91 @@
+.study-top {
+  padding: 34rpx;
+  color: #fff;
+  background: linear-gradient(135deg, #8f75e6, #c3a7ff);
+  text-align: center;
+  font-size: 36rpx;
+  font-weight: 900;
+}
+
+.step-track {
+  display: flex;
+  gap: 12rpx;
+  overflow-x: auto;
+  padding: 22rpx;
+}
+
+.step {
+  min-width: 72rpx;
+  padding: 14rpx;
+  border-radius: 999rpx;
+  color: #51399d;
+  background: #efe9ff;
+  text-align: center;
+  font-weight: 800;
+}
+
+.step.active {
+  color: #fff;
+  background: #6d53bf;
+}
+
+.learn-card {
+  margin: 24rpx;
+  min-height: 620rpx;
+  padding: 42rpx 26rpx;
+  border-radius: 28rpx;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 16rpx 40rpx rgba(61, 43, 112, 0.12);
+}
+
+.word {
+  color: #063d67;
+  font-size: 72rpx;
+  font-weight: 900;
+}
+
+.ipa {
+  margin-top: 18rpx;
+  color: #6d53bf;
+}
+
+.meaning {
+  margin: 34rpx 0;
+  font-size: 36rpx;
+  font-weight: 800;
+}
+
+.answer-list {
+  display: grid;
+  gap: 18rpx;
+}
+
+.chunks,
+.keyboard {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 18rpx;
+}
+
+.chunk,
+.key {
+  min-width: 92rpx;
+  padding: 20rpx;
+  border-radius: 16rpx;
+  color: #51399d;
+  background: #efe9ff;
+  font-weight: 900;
+}
+
+.tip {
+  color: #797285;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18rpx;
+  padding: 24rpx;
+}

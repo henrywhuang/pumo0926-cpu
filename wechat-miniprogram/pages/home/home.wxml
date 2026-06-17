@@ -1,0 +1,50 @@
+<view class="hero">
+  <text class="eyebrow">Junior English Vocabulary</text>
+  <text class="title">超级单词表</text>
+  <text class="desc">选书、导入、做计划，按艾宾浩斯曲线复习。</text>
+</view>
+
+<view class="card">
+  <view class="section-title">选择单词书</view>
+  <picker mode="selector" range="{{books}}" range-key="title" bindchange="onBookChange">
+    <view class="picker">{{selectedBook.title}}</view>
+  </picker>
+  <button class="primary-btn import" bindtap="importBook">{{imported ? '重新导入词表' : '导入本书词表'}}</button>
+  <text class="muted">当前词表：{{wordCount}} 个核心词</text>
+</view>
+
+<view class="card">
+  <view class="section-title">学习计划</view>
+  <view class="plan-row">
+    <text>每天新学</text>
+    <text class="daily">{{dailyCount}} 个</text>
+  </view>
+  <slider min="1" max="10" value="{{dailyCount}}" activeColor="#6d53bf" bindchange="onDailyChange" />
+  <view class="step-grid">
+    <block wx:for="{{steps}}" wx:key="id">
+      <view class="step {{item.enabled ? 'active' : ''}}" data-id="{{item.id}}" bindtap="toggleStep">{{item.label}}</view>
+    </block>
+  </view>
+  <button class="primary-btn" disabled="{{!imported}}" bindtap="savePlan">保存计划</button>
+</view>
+
+<view class="card">
+  <view class="section-title">今日任务</view>
+  <view class="task">
+    <text class="task-title">今日新学（{{newWords.length}}/{{dailyCount}}词）</text>
+    <text class="muted">完成每个词的七步学习。</text>
+  </view>
+  <view class="task">
+    <text class="task-title">速刷复习（{{review.quick.length}}词）</text>
+    <text class="muted">1 天前学习的词。</text>
+  </view>
+  <view class="task">
+    <text class="task-title">巩固复习（{{review.solid.length}}词）</text>
+    <text class="muted">2/4 天前学习的词。</text>
+  </view>
+  <view class="task">
+    <text class="task-title">深度复习（{{review.deep.length}}词）</text>
+    <text class="muted">7/15/30 天前学习的词。</text>
+  </view>
+  <button class="primary-btn" disabled="{{!newWords.length}}" bindtap="startStudy">开始学习</button>
+</view>

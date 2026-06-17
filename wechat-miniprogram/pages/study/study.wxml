@@ -1,0 +1,48 @@
+<view class="study-top">
+  <text>{{type === 'new' ? '今日新学' : '今日复习'}}（{{wordIndex + 1}}/{{words.length}}）</text>
+</view>
+
+<view class="step-track">
+  <block wx:for="{{displaySteps}}" wx:key="id">
+    <view class="step {{index === stepIndex ? 'active' : ''}}">{{item.label}}</view>
+  </block>
+</view>
+
+<view class="learn-card" wx:if="{{current}}">
+  <view class="word">{{current.word}}</view>
+  <view class="ipa">英 {{current.uk}} ｜ 美 {{current.us}}</view>
+  <view class="meaning">{{current.part}} {{current.cn}}</view>
+
+  <view wx:if="{{step === 'listen'}}">
+    <button class="primary-btn" bindtap="playTriple">慢-中-快三遍</button>
+  </view>
+
+  <view wx:elif="{{step === 'translate'}}" class="answer-list">
+    <button class="secondary-btn" bindtap="markStepDone">{{current.part}} {{current.cn}}</button>
+    <button class="secondary-btn">n. 苹果</button>
+    <button class="secondary-btn">v. 购买</button>
+  </view>
+
+  <view wx:elif="{{step === 'spellread'}}" class="chunks">
+    <block wx:for="{{current.chunks}}" wx:key="*this">
+      <view class="chunk">{{item}}</view>
+    </block>
+  </view>
+
+  <view wx:elif="{{step === 'spell'}}">
+    <view class="keyboard">
+      <block wx:for="{{letters}}" wx:key="*this">
+        <button class="key" bindtap="markStepDone">{{item}}</button>
+      </block>
+    </view>
+  </view>
+
+  <view wx:else>
+    <text class="tip">完成“{{stepName}}”步骤后继续。</text>
+  </view>
+</view>
+
+<view class="actions">
+  <button class="secondary-btn" bindtap="prevStep">上一步</button>
+  <button class="primary-btn" bindtap="nextStep">{{lastStep ? '完成本词' : '下一步'}}</button>
+</view>

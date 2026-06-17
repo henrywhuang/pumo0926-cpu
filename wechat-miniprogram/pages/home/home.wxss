@@ -1,0 +1,91 @@
+.hero {
+  padding: 44rpx 32rpx 22rpx;
+  color: #fff;
+  background: linear-gradient(135deg, #8f75e6, #c3a7ff);
+}
+
+.eyebrow {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.title {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 48rpx;
+  font-weight: 900;
+}
+
+.desc {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 28rpx;
+}
+
+.section-title {
+  margin-bottom: 20rpx;
+  font-size: 34rpx;
+  font-weight: 800;
+}
+
+.picker {
+  margin-bottom: 18rpx;
+  padding: 22rpx;
+  border: 1rpx solid #e4dff0;
+  border-radius: 16rpx;
+  background: #fbf8ff;
+  font-weight: 700;
+}
+
+.import {
+  margin-bottom: 18rpx;
+}
+
+.plan-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.daily {
+  color: #6d53bf;
+  font-size: 40rpx;
+  font-weight: 900;
+}
+
+.step-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14rpx;
+  margin: 18rpx 0 24rpx;
+}
+
+.step {
+  padding: 18rpx 0;
+  border: 1rpx solid #d8cbed;
+  border-radius: 16rpx;
+  color: #51399d;
+  background: #fbf8ff;
+  text-align: center;
+  font-weight: 800;
+}
+
+.step.active {
+  color: #fff;
+  background: #6d53bf;
+}
+
+.task {
+  margin-bottom: 18rpx;
+  padding: 20rpx;
+  border-radius: 16rpx;
+  background: #fbf8ff;
+}
+
+.task-title {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 30rpx;
+  font-weight: 800;
+}

@@ -724,8 +724,13 @@ function renderBrandPanel() {
         </div>
       </div>
       <div class="side-actions">
-        <button class="secondary-btn" data-action="showSetup" type="button">选择单词书</button>
-        <button class="secondary-btn" data-action="showTasks" type="button" ${currentPlan() ? "" : "disabled"}>今日任务</button>
+        ${currentPlan() ? `
+          <button class="primary-btn" data-action="showTasks" type="button">今日任务</button>
+          <button class="secondary-btn" data-action="showSetup" type="button">重新选择单词书</button>
+        ` : `
+          <button class="secondary-btn" data-action="showSetup" type="button">选择单词书</button>
+          <button class="secondary-btn" data-action="showTasks" type="button" disabled>今日任务</button>
+        `}
         <button class="ghost-btn" data-action="resetProgress" type="button">清空学习记录</button>
       </div>
     </aside>

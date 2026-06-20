@@ -1,5 +1,5 @@
 const STEP_DEFS = [
-  { id: "listen", label: "听", title: "听发音", desc: "英式/美式发音，先慢后快三遍。" },
+  { id: "listen", label: "听", title: "听发音", desc: "进入即自动发音，默认英式，可切换英美口音重听。" },
   { id: "learn", label: "学", title: "学单词", desc: "看词形、词义、音标和例句。" },
   { id: "read", label: "读", title: "跟读", desc: "先听领读，再开口跟读。" },
   { id: "translate", label: "译", title: "选释义", desc: "根据英文选择中文意思。" },
@@ -108,7 +108,7 @@ const state = {
   gradeFilter: "全部",
   publisherFilter: "全部",
   selectedBookId: books[0].id,
-  accent: "us",
+  accent: "uk",
   session: null,
   pickedChunks: [],
   pickedLetters: [],
@@ -132,6 +132,8 @@ const state = {
 
 // 版本+册次 → 官方教材封面缩略图 URL，异步从教材清单加载后填充。
 let coverMap = {};
+// 「听」页自动发音去重：记录最近一次已自动播放的单词 id。
+let lastAutoSpoken = "";
 
 const app = document.querySelector("#app");
 if (state.progress.plan?.bookId) state.selectedBookId = state.progress.plan.bookId;
@@ -692,7 +694,7 @@ function render() {
   app.innerHTML = `
     <div class="app-frame">
       ${renderBrandPanel()}
-      ${state.screen === "setup" ? renderSetup() : renderTasks()}
+      ${state.screen === "setup" ? renderSetup() : state.screen === "codex" ? renderCodex() : renderTasks()}
     </div>
   `;
   bindDynamicInputs();
@@ -829,6 +831,7 @@ function renderBrandPanel() {
           <button class="secondary-btn" data-action="showSetup" type="button">选择单词书</button>
           <button class="secondary-btn" data-action="showTasks" type="button" disabled>今日任务</button>
         `}
+        <button class="secondary-btn codex-entry" data-action="showCodex" type="button">⭐ 学神图鉴</button>
         <button class="ghost-btn" data-action="resetProgress" type="button">清空学习记录</button>
       </div>
     </aside>
@@ -938,6 +941,80 @@ function renderSetup() {
         <button class="setup-tab ${activeTab === "plan" ? "active" : ""}" data-tab="plan" type="button">学习计划</button>
       </div>
       ${activeTab === "book" ? bookPanel : planPanel}
+    </section>
+  `;
+}
+
+// 学神图鉴：承接等级体系，展示 R/SR/SSR 进阶与按词量解锁的专属装扮
+function renderCodex() {
+  const lv = studyLevel();
+  const learned = lv.learned;
+  const tiers = [
+    { rank: "R", name: "见习学神", need: 0, desc: "踏入学神之路 · 基础形象" },
+    { rank: "SR", name: "进阶学神", need: 100, desc: "紫光加身 · 解锁专属装扮" },
+    { rank: "SSR", name: "超级学神", need: 300, desc: "金彩光环 · 全破框背景" }
+  ];
+  const cosmetics = [
+    { icon: "📖", name: "智慧书", need: 20 },
+    { icon: "🎓", name: "学士帽", need: 60 },
+    { icon: "🔥", name: "火焰光环", need: 120 },
+    { icon: "⚡", name: "闪电披风", need: 200 },
+    { icon: "👑", name: "学神金冠", need: 300 },
+    { icon: "🌈", name: "虹彩破框", need: 400 }
+  ];
+  const tierCards = tiers
+    .map((tier) => {
+      const unlocked = learned >= tier.need;
+      const current = tier.rank === lv.rank;
+      const cls = `tier tier--${tier.rank.toLowerCase()}${unlocked ? "" : " locked"}${current ? " current" : ""}`;
+      return `
+      <div class="${cls}">
+        <div class="tier-rank">${tier.rank}</div>
+        <div class="tier-frame">${starMascot(82)}</div>
+        <strong>${tier.name}</strong>
+        <div class="tier-desc">${tier.desc}</div>
+        ${unlocked ? "" : `<div class="tier-lock"><span>🔒 掌握 ${tier.need} 词解锁</span></div>`}
+      </div>`;
+    })
+    .join("");
+  const unlockedCount = cosmetics.filter((item) => learned >= item.need).length;
+  const cosmeticCards = cosmetics
+    .map((item) => {
+      const unlocked = learned >= item.need;
+      return `
+      <div class="cosmetic ${unlocked ? "unlocked" : "locked"}">
+        ${unlocked ? `<span class="cm-tick">✓</span>` : ""}
+        <div class="cm-icon">${item.icon}</div>
+        <strong>${item.name}</strong>
+        <div class="cm-need">${unlocked ? "已解锁" : `掌握 ${item.need} 词`}</div>
+      </div>`;
+    })
+    .join("");
+  const nextHint = lv.rank === "SSR"
+    ? `已掌握 ${learned} 词 · 学神满阶 ✨`
+    : `距 ${lv.rank === "R" ? "SR" : "SSR"} 还差 ${lv.remain} 词`;
+  return `
+    <section class="desk-panel codex">
+      <div class="section-head">
+        <div>
+          <h2>学神图鉴</h2>
+          <p>掌握更多单词，解锁更高阶的学神形象与专属装扮。</p>
+        </div>
+        <button class="secondary-btn" data-action="showTasks" type="button">返回任务</button>
+      </div>
+      <div class="codex-hero">
+        ${starMascot(92)}
+        <div class="codex-hero-meta">
+          <div class="codex-rank-badge">${lv.rank}</div>
+          <strong>当前 · ${lv.name}</strong>
+          <div class="level-bar"><i style="width:${lv.progress}%"></i></div>
+          <span>${nextHint}</span>
+        </div>
+      </div>
+      <h3 class="codex-subhead">学神进阶</h3>
+      <div class="codex-grid">${tierCards}</div>
+      <h3 class="codex-subhead">专属装扮（${unlockedCount}/${cosmetics.length}）</h3>
+      <div class="cosmetic-grid">${cosmeticCards}</div>
     </section>
   `;
 }
@@ -1144,6 +1221,15 @@ function renderStudy() {
       </div>
     </section>
   `;
+  // 进入「听」页即自动发音；同一词只自动播一次，离开后重置以便再次进入时重播。
+  if (stepId === "listen") {
+    if (lastAutoSpoken !== word.id) {
+      lastAutoSpoken = word.id;
+      setTimeout(() => speak(word.word), 220);
+    }
+  } else {
+    lastAutoSpoken = "";
+  }
 }
 
 function renderStepTrack(session) {
@@ -1193,10 +1279,7 @@ function renderListenStep(word) {
     </div>
     ${renderWordDisplay(word)}
     <div class="meaning-line">${word.part} ${word.cn}</div>
-    <div class="button-row" style="justify-content:center;margin-top:18px">
-      <button class="primary-btn" data-action="playTriple" type="button">▶ 慢-中-快三遍</button>
-      <button class="secondary-btn" data-action="playWord" type="button">单次播放</button>
-    </div>
+    <p class="listen-tip">进入本页自动发音，点「英式发音 / 美式发音」可切换并重听。</p>
   `;
 }
 
@@ -1384,6 +1467,7 @@ app.addEventListener("click", (event) => {
   if (accentButton) {
     state.accent = accentButton.dataset.accent;
     render();
+    if (state.session) speak(currentWord().word);
     return;
   }
   if (choiceButton) {
@@ -1421,6 +1505,11 @@ function handleAction(button) {
     state.session = null;
     render();
   }
+  if (action === "showCodex") {
+    state.screen = "codex";
+    state.session = null;
+    render();
+  }
   if (action === "showRegister") {
     state.authMode = "register";
     state.auth.error = "";
@@ -1454,7 +1543,6 @@ function handleAction(button) {
   }
   if (action === "playWord") speak(currentWord().word);
   if (action === "playExample") speak(currentWord().example);
-  if (action === "playTriple") playTriple(currentWord().word);
   if (action === "playChunks") playChunks(currentWord());
   if (action === "record") startRecognition();
   if (action === "markRead") setStatus("跟读完成，继续下一步。", "success");
@@ -1888,13 +1976,6 @@ function speak(text, rate = 0.86) {
     utter.pitch = isUk ? 0.75 : 1.35;
   }
   window.speechSynthesis.speak(utter);
-}
-
-function playTriple(text) {
-  setStatus("正在播放：慢速、标准、快速。");
-  [0.62, 0.86, 1.05].forEach((rate, index) => {
-    setTimeout(() => speak(text, rate), index * 1300);
-  });
 }
 
 function playChunks(word) {

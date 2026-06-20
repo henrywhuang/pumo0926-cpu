@@ -5,7 +5,7 @@ const STEP_DEFS = [
   { id: "translate", label: "译", title: "选释义", desc: "根据英文选择中文意思。" },
   { id: "split", label: "拆分", title: "拆分发音", desc: "按音节和词块理解单词。" },
   { id: "spellread", label: "拼读", title: "词块拼读", desc: "把拆开的词块拼回完整单词。" },
-  { id: "spell", label: "拼写", title: "字母拼写", desc: "从字母拼块里按顺序点出正确拼写（含重复字母）。" }
+  { id: "spell", label: "拼写", title: "字母拼写", desc: "从浮出的字母键盘按顺序点出正确拼写（含重复字母）。" }
 ];
 
 const REVIEW_INTERVALS = [
@@ -1651,7 +1651,7 @@ function renderSpellStep(word) {
     </div>
     <div class="letter-slots">${slots}</div>
     ${renderLetterPool(word)}
-    <p class="hint-line">单词共 ${letters.length} 个字母，按顺序点出正确拼写（重复字母会出现相同个数）。</p>
+    <p class="hint-line">单词共 ${letters.length} 个字母，从下方浮出的字母键盘按顺序点出正确拼写（重复字母会出现相同个数）。</p>
     <div class="button-row" style="justify-content:center;margin-top:12px">
       <button class="secondary-btn" data-action="deleteLetter" type="button">⌫ 删除</button>
       <button class="secondary-btn" data-action="hintLetter" type="button">提示</button>

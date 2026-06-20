@@ -1763,42 +1763,42 @@ p {
   }
 }
 
-/* 字母拼块池：正好是单词的全部字母（含重复） */
+/* 浮出的键盘：键盘底板上，单词的全部字母（含重复）浮起成键，点击拼写 */
 .letter-pool {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  margin-top: 24px;
-  padding: 16px 12px;
-  border-radius: 16px;
-  background: rgba(227, 225, 234, 0.6);
+  gap: 9px 8px;
+  margin-top: 26px;
+  padding: 20px 12px 14px;
+  border-radius: 18px;
+  background: rgba(227, 225, 234, 0.82);
 }
 
 .letter-tile {
   display: grid;
   place-items: center;
-  min-width: 48px;
-  height: 54px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  color: var(--purple-dark);
+  min-width: 44px;
+  height: 50px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--ink);
   background: #fff;
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 900;
   text-transform: lowercase;
-  box-shadow: 0 6px 12px rgba(73, 68, 82, 0.12);
-  transition: transform 0.12s ease, opacity 0.12s ease;
+  box-shadow: 0 6px 10px rgba(73, 68, 82, 0.12);
+  transform: translateY(-8px);
+  animation: keyFloat 0.32s ease both;
 }
 
 .letter-tile:active {
-  transform: translateY(2px) scale(0.96);
+  transform: translateY(-2px) scale(0.95);
 }
 
 .letter-tile.used {
-  opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
 }
 
 .status-line {

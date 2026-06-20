@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-06-20T05:30:37.048Z",
+  "bookKey": "pep-8a-2024",
+  "publisher": "人教版",
+  "grade": "八年级上",
+  "pageCount": 12,
+  "rawRowCount": 545,
+  "rowCount": 545,
+  "outputCsv": "data/wordbooks.official-authorized.csv",
+  "outputJson": "data/wordbooks.real.json",
+  "source": "客户授权官方电子教材书后词汇表",
+  "authorizationId": "AUTHORIZATION_CONFIRMATION_2026-06-17"
+}

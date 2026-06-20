@@ -1,0 +1,9 @@
+source_name,url,source_type,coverage_observed,latest_signal,importable,confidence,notes
+国家中小学智慧教育平台电子教材,https://basic.smartedu.cn/elecEdu,官方平台,电子教材入口,需进入平台逐册核对,否,高,"可作为教材版本核验入口，但不是结构化词表 Excel。"
+人民教育出版社七年级上册资源页,https://www.pep.com.cn/zslth/yyptzy/czyy/7s/,官方出版社资源页,人教版七年级上册资源,页面显示七上单元资源,否,高,"可核验人教七上资源存在，但未提供可直接导入的完整词表表格。"
+腾讯文库新人教七上2024秋单词表,https://wenku.docs.qq.com/detail?docId=GXyrta18H1&docType=0,第三方文档,人教版七年级上册,2024秋,部分可读,中,"看起来包含词表字段，但不是客户提供文件，不能确认完整性和授权。"
+知乎专栏2024秋新人教七上单词表,https://zhuanlan.zhihu.com/p/706709892,第三方文章,人教版七年级上册,2024秋,否,低,"可作为线索，不能作为正式导入源。"
+新东方在线外研社七上词汇表,https://www.koolearn.com/dict/tag_1612_1.html,第三方词典,外研社七年级上册,未确认最新,部分可读,中,"不是客户最新教材词表，版本年份和完整性未确认。"
+新东方在线译林牛津七上词汇表,https://www.koolearn.com/dict/tag_1468_1.html,第三方词典,译林牛津七年级上册,未确认最新,部分可读,中,"不是客户最新教材词表，版本年份和完整性未确认。"
+英语朗读宝牛津译林七上,https://yyld.51jiaoxi.com/qishang/njylb/,第三方同步朗读,牛津译林七年级上册,页面称2026新教材,否,中,"用于发现版本线索，不是结构化客户词表。"
+深圳本地宝沪教版七上单词表,https://m.bendibao.com/show998189.html,第三方文章,沪教版七年级上册,未确认最新,部分可读,低,"地域版本和年份不确定，不能直接作为全量教材词表。"

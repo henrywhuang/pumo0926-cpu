@@ -17,18 +17,29 @@ const REVIEW_INTERVALS = [
   { days: 30, name: "深度复习", steps: ["listen", "read", "translate", "split", "spellread", "spell"], note: "第 30 天长期记忆" }
 ];
 
-const publishers = ["人教版", "外研版", "译林版", "沪教牛津版", "北师大版", "仁爱版", "冀教版", "鲁教版", "教科版"];
-const grades = ["七年级上", "七年级下", "八年级上", "八年级下"];
-const books = publishers.flatMap((publisher) => grades.map((grade) => ({
-  id: `${publisher}-${grade}`,
-  publisher,
-  grade,
-  title: `${publisher} ${grade}`,
-  subtitle: "全国初中英语教材词汇",
-  units: grade.includes("七") ? 12 : 10
-})));
+const publishers = ["人教版", "外研版", "译林版", "北师大版", "冀教版", "科普版", "沪教版", "沪外教版", "沪教牛津版", "仁爱版", "鲁教版", "教科版"];
+// 先选学制，再选年级；两种学制都把初中年级覆盖完整。
+// 六三制：初中三年（七、八、九年级）。五四制：初中四年（六、七、八、九年级）。
+const gradeSystems = {
+  "六三制": ["七年级上", "七年级下", "八年级上", "八年级下", "九年级上", "九年级下", "九年级全一册"],
+  "五四制": ["六年级上", "六年级下", "七年级上", "七年级下", "八年级上", "八年级下", "九年级上", "九年级下", "九年级全一册"]
+};
+const systems = Object.keys(gradeSystems);
+const books = systems.flatMap((system) =>
+  publishers.flatMap((publisher) =>
+    gradeSystems[system].map((grade) => ({
+      id: `${publisher}-${system}-${grade}`,
+      publisher,
+      system,
+      grade,
+      title: `${publisher} ${grade}`,
+      subtitle: `全国初中英语教材词汇 · ${system}`,
+      units: grade.includes("七") || grade.includes("六") ? 12 : 10
+    }))
+  )
+);
 
-const vocabulary = [
+let vocabulary = [
   w("welcome", "欢迎", "v.", "七年级上", "Starter", "/ˈwelkəm/", "/ˈwelkəm/", ["wel", "come"], ["/w/", "/e/", "/l/", "/k/", "/ə/", "/m/"], "Welcome to our school.", "欢迎来到我们学校。"),
   w("classmate", "同班同学", "n.", "七年级上", "Unit 1", "/ˈklɑːsmeɪt/", "/ˈklæsmeɪt/", ["class", "mate"], ["/k/", "/l/", "/ɑː/", "/s/", "/m/", "/eɪ/", "/t/"], "My classmate is good at English.", "我的同班同学擅长英语。"),
   w("library", "图书馆", "n.", "七年级上", "Unit 2", "/ˈlaɪbrəri/", "/ˈlaɪbreri/", ["li", "bra", "ry"], ["/l/", "/aɪ/", "/b/", "/r/", "/ə/", "/r/", "/i/"], "We read books in the library.", "我们在图书馆读书。"),
@@ -83,6 +94,7 @@ const qwertyRows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 
 const state = {
   screen: "tasks",
+  systemFilter: "六三制",
   gradeFilter: "全部",
   bookQuery: "",
   selectedBookId: books[0].id,
@@ -99,6 +111,7 @@ const state = {
 const app = document.querySelector("#app");
 if (state.progress.plan?.bookId) state.selectedBookId = state.progress.plan.bookId;
 if (new URLSearchParams(window.location.search).get("demo") === "1") seedDemoProgress();
+loadRealWordbook();
 
 function w(word, cn, part, grade, unit, uk, us, chunks, phonics, example, exampleCn) {
   return {
@@ -115,6 +128,54 @@ function w(word, cn, part, grade, unit, uk, us, chunks, phonics, example, exampl
     example,
     exampleCn
   };
+}
+
+async function loadRealWordbook() {
+  try {
+    const response = await fetch("data/wordbooks.real.json", { cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json();
+    const officialWords = flattenWordbook(data);
+    if (!officialWords.length) return;
+    vocabulary = [...vocabulary, ...officialWords];
+    render();
+  } catch {
+    // Static demo still works when the real wordbook file is unavailable.
+  }
+}
+
+function flattenWordbook(data) {
+  const result = [];
+  for (const publisher of data.publishers || []) {
+    for (const grade of publisher.grades || []) {
+      for (const unit of grade.units || []) {
+        for (const [index, item] of (unit.words || []).entries()) {
+          result.push({
+            id: `${publisher.name}-${grade.name}-${unit.name}-${item.word}-${index}`,
+            publisher: publisher.name,
+            grade: grade.name,
+            unit: unit.name,
+            word: item.word,
+            cn: item.cn,
+            part: item.part,
+            uk: item.phonetic?.uk || "",
+            us: item.phonetic?.us || item.phonetic?.uk || "",
+            chunks: item.chunks?.length ? item.chunks : splitWordIntoChunks(item.word),
+            phonics: item.phonics || [],
+            example: item.example || "",
+            exampleCn: item.exampleCn || ""
+          });
+        }
+      }
+    }
+  }
+  return result;
+}
+
+function splitWordIntoChunks(text) {
+  if (!/^[a-zA-Z][a-zA-Z'-]*$/.test(text)) return [text];
+  const chunks = text.match(/[bcdfghjklmnpqrstvwxyz]*[aeiouy]+[bcdfghjklmnpqrstvwxyz]*/gi);
+  return chunks?.length ? chunks : [text];
 }
 
 function loadProgress() {
@@ -231,8 +292,13 @@ function selectedBook() {
 }
 
 function selectedWords() {
-  const book = selectedBook();
-  return vocabulary.filter((item) => item.grade === book.grade);
+  return wordsForBook(selectedBook());
+}
+
+function wordsForBook(book) {
+  const officialWords = vocabulary.filter((item) => item.publisher === book.publisher && item.grade === book.grade);
+  if (officialWords.length) return officialWords;
+  return vocabulary.filter((item) => !item.publisher && item.grade === book.grade);
 }
 
 function planSteps() {
@@ -265,7 +331,7 @@ function renderBrandPanel() {
     <aside class="brand-panel">
       <div class="eyebrow">Junior English Vocabulary</div>
       <h1>初中词汇<br />超级单词表</h1>
-      <p>覆盖初一、初二全国主流教材词书选择，支持每日计划和艾宾浩斯复习推荐。</p>
+      <p>覆盖初中主流教材与册次词书选择，支持每日计划和艾宾浩斯复习推荐。</p>
       <div class="stat-grid">
         <div class="stat"><strong>${total}</strong><span>本书词汇</span></div>
         <div class="stat"><strong>${learned}</strong><span>已学</span></div>
@@ -282,9 +348,10 @@ function renderBrandPanel() {
 
 function renderSetup() {
   const filteredBooks = books.filter((book) => {
+    const matchSystem = book.system === state.systemFilter;
     const matchGrade = state.gradeFilter === "全部" || book.grade === state.gradeFilter;
     const text = `${book.title} ${book.subtitle}`.toLowerCase();
-    return matchGrade && text.includes(state.bookQuery.trim().toLowerCase());
+    return matchSystem && matchGrade && text.includes(state.bookQuery.trim().toLowerCase());
   });
   const plan = currentPlan() || {
     bookId: state.selectedBookId,
@@ -292,19 +359,22 @@ function renderSetup() {
     steps: STEP_DEFS.map((step) => step.id)
   };
   const selected = books.find((book) => book.id === state.selectedBookId) || books[0];
-  const selectedCount = vocabulary.filter((item) => item.grade === selected.grade).length;
+  const selectedCount = wordsForBook(selected).length;
   const imported = state.progress.importedBooks[state.selectedBookId];
   return `
     <section class="desk-panel">
       <div class="section-head">
         <div>
           <h2>选择单词书</h2>
-          <p>先选教材版本和册次，再设置每天新学几个单词。</p>
+          <p>先选学制，再选教材版本和册次，最后设置每天新学几个单词。</p>
         </div>
       </div>
       <div class="book-toolbar">
+        <select class="select" id="systemFilter" aria-label="选择学制">
+          ${systems.map((system) => `<option value="${system}" ${state.systemFilter === system ? "selected" : ""}>${system}</option>`).join("")}
+        </select>
         <select class="select" id="gradeFilter" aria-label="选择年级册次">
-          ${["全部", ...grades].map((grade) => `<option value="${grade}" ${state.gradeFilter === grade ? "selected" : ""}>${grade}</option>`).join("")}
+          ${["全部", ...gradeSystems[state.systemFilter]].map((grade) => `<option value="${grade}" ${state.gradeFilter === grade ? "selected" : ""}>${grade}</option>`).join("")}
         </select>
         <input class="input" id="bookSearch" value="${escapeHtml(state.bookQuery)}" placeholder="搜索：人教版 / 外研版 / 八年级上" />
       </div>
@@ -623,7 +693,7 @@ function renderReadStep(word) {
 }
 
 function renderTranslateStep(word) {
-  const options = shuffle([word, ...shuffle(vocabulary.filter((item) => item.id !== word.id)).slice(0, 2)]);
+  const options = shuffle([word, ...shuffle(selectedWords().filter((item) => item.id !== word.id)).slice(0, 2)]);
   return `
     ${renderWordDisplay(word)}
     <hr class="divider" />
@@ -710,9 +780,24 @@ function renderKeyboard(word) {
 }
 
 function bindDynamicInputs() {
+  const system = document.querySelector("#systemFilter");
   const grade = document.querySelector("#gradeFilter");
   const search = document.querySelector("#bookSearch");
   const daily = document.querySelector("#dailyCount");
+  system?.addEventListener("change", (event) => {
+    state.systemFilter = event.target.value;
+    // 切换学制后，若当前年级不属于新学制则重置为“全部”。
+    if (state.gradeFilter !== "全部" && !gradeSystems[state.systemFilter].includes(state.gradeFilter)) {
+      state.gradeFilter = "全部";
+    }
+    // 若已选单词书不属于新学制，自动切换到该学制下的第一本。
+    const current = books.find((book) => book.id === state.selectedBookId);
+    if (!current || current.system !== state.systemFilter) {
+      const first = books.find((book) => book.system === state.systemFilter);
+      if (first) state.selectedBookId = first.id;
+    }
+    render();
+  });
   grade?.addEventListener("change", (event) => {
     state.gradeFilter = event.target.value;
     render();
@@ -865,7 +950,7 @@ function importBook() {
   const book = books.find((item) => item.id === state.selectedBookId) || books[0];
   state.progress.importedBooks[state.selectedBookId] = {
     importedAt: todayKey(),
-    count: vocabulary.filter((item) => item.grade === book.grade).length
+    count: wordsForBook(book).length
   };
   saveProgress();
   render();

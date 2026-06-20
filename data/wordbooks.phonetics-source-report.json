@@ -1,0 +1,381 @@
+{
+  "generatedAt": "2026-06-20T11:15:13.435Z",
+  "source": "data/wordbooks.official-authorized.csv",
+  "target": "data/wordbooks.real.json",
+  "rule": "音标只取原始词表 phonetic_uk / phonetic_us 字段；若 OCR 把音标夹在原始 word/part/cn 文本中，则先抽出回填到 CSV 字段，再导入 JSON。",
+  "total": 17173,
+  "withBoth": 14403,
+  "missing": 2770,
+  "coverage": 83.87,
+  "byPublisher": {
+    "北师大版": {
+      "total": 1944,
+      "withBoth": 1586,
+      "missing": 358
+    },
+    "沪教版": {
+      "total": 2798,
+      "withBoth": 2026,
+      "missing": 772
+    },
+    "沪外教版": {
+      "total": 1742,
+      "withBoth": 1436,
+      "missing": 306
+    },
+    "冀教版": {
+      "total": 1815,
+      "withBoth": 1758,
+      "missing": 57
+    },
+    "教科版": {
+      "total": 555,
+      "withBoth": 538,
+      "missing": 17
+    },
+    "科普版": {
+      "total": 2320,
+      "withBoth": 2110,
+      "missing": 210
+    },
+    "人教版": {
+      "total": 2622,
+      "withBoth": 2069,
+      "missing": 553
+    },
+    "外研版": {
+      "total": 1550,
+      "withBoth": 1337,
+      "missing": 213
+    },
+    "译林版": {
+      "total": 1827,
+      "withBoth": 1543,
+      "missing": 284
+    }
+  },
+  "samples": [
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Unit 1",
+      "word": "grandparent",
+      "phonetic_uk": "/'graenpearant/",
+      "phonetic_us": "/'graenpearant/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Unit 1",
+      "word": "husband",
+      "phonetic_uk": "/hAzband/",
+      "phonetic_us": "/hAzband/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Unit 1",
+      "word": "wife",
+      "phonetic_uk": "/warf/",
+      "phonetic_us": "/warf/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Unit 1",
+      "word": "daughter",
+      "phonetic_uk": "/'do:ta/",
+      "phonetic_us": "/'do:ta/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Unit 1",
+      "word": "son",
+      "phonetic_uk": "/sAn/",
+      "phonetic_us": "/sAn/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Unit 1",
+      "word": "same",
+      "phonetic_uk": "/sei/",
+      "phonetic_us": "/sei/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Unit 1",
+      "word": "policeman",
+      "phonetic_uk": "/pa li:sman/",
+      "phonetic_us": "/pa li:sman/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Unit 1",
+      "word": "only",
+      "phonetic_uk": "/'sonli/",
+      "phonetic_us": "/'sonli/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "member",
+      "phonetic_uk": "/memba/",
+      "phonetic_us": "/memba/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "sweet",
+      "phonetic_uk": "/swi:t/",
+      "phonetic_us": "/swi:t/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "active",
+      "phonetic_uk": "/eektrv/",
+      "phonetic_us": "/eektrv/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "caring",
+      "phonetic_uk": "/kear/",
+      "phonetic_us": "/kear/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "polite",
+      "phonetic_uk": "/po'lat/",
+      "phonetic_us": "/po'lat/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "noisy",
+      "phonetic_uk": "/norzi/",
+      "phonetic_us": "/norzi/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "violin",
+      "phonetic_uk": "/vareln/",
+      "phonetic_us": "/vareln/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "hers",
+      "phonetic_uk": "/hs:z/",
+      "phonetic_us": "/hs:z/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "pilot",
+      "phonetic_uk": "/pailat/",
+      "phonetic_us": "/pailat/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "biscuit",
+      "phonetic_uk": "/biskrt/",
+      "phonetic_us": "/biskrt/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "burn",
+      "phonetic_uk": "/b3:n/",
+      "phonetic_us": "/b3:n/"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "chess",
+      "phonetic_uk": "/tjes/",
+      "phonetic_us": "/tjes/"
+    }
+  ],
+  "missingSamples": [
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Unit 1",
+      "word": "Topic Talk",
+      "part": "phr.",
+      "cn": ""
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "lots of",
+      "part": "phr.",
+      "cn": "大量，许多"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "vi.",
+      "part": "",
+      "cn": "燃烧"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "play chess",
+      "part": "phr.",
+      "cn": "下国际象棋"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 2",
+      "word": "play basketball",
+      "part": "phr.",
+      "cn": "打篮球"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 3",
+      "word": "do the cleaning",
+      "part": "phr.",
+      "cn": "打扫"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 3",
+      "word": "vt. &v.",
+      "part": "v.",
+      "cn": "用，花(钱)"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 3",
+      "word": "Writing Workshop",
+      "part": "phr.",
+      "cn": ""
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 3",
+      "word": "be good at",
+      "part": "phr.",
+      "cn": "擅长，精通"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 3",
+      "word": "look forward to",
+      "part": "phr.",
+      "cn": "盼望，期待"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 3",
+      "word": "Speaking Workshop",
+      "part": "phr.",
+      "cn": ""
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 3",
+      "word": "have a good time",
+      "part": "phr.",
+      "cn": "过得愉快"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Unit 2",
+      "word": "Topic Talk",
+      "part": "phr.",
+      "cn": ""
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Unit 2",
+      "word": "ICT",
+      "part": "",
+      "cn": "信息与通信技术"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "vt.&v.(",
+      "part": "v.",
+      "cn": "使)破，裂；弄坏"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 1",
+      "word": "a.m.ler'em",
+      "part": "",
+      "cn": "上午，午前"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 2",
+      "word": "pencil case",
+      "part": "phr.",
+      "cn": "铅笔盒"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 3",
+      "word": "dining hall",
+      "part": "phr.",
+      "cn": "餐厅"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 3",
+      "word": "playing field",
+      "part": "phr.",
+      "cn": "运动场，操场"
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unit": "Lesson 3",
+      "word": "vt. & vi.(",
+      "part": "phr.",
+      "cn": "在网站上)发布"
+    }
+  ]
+}

@@ -109,6 +109,8 @@ const state = {
   publisherFilter: "全部",
   selectedBookId: books[0].id,
   accent: "uk",
+  studyMode: "split",
+  showFullCn: false,
   session: null,
   pickedChunks: [],
   pickedLetters: [],
@@ -1251,18 +1253,147 @@ function renderStepContent(stepId, word) {
   return "";
 }
 
+// 四线三格单词卡
+function wordGrid(word) {
+  return `<div class="word-grid"><div class="grid-word">${escapeHtml(word.word)}</div></div>`;
+}
+
+// 英/美口音小切换 + 当前口音音标（可选麦克风跟读）
+function phoneticRow(word, withMic = false) {
+  const ipa = state.accent === "uk" ? word.uk : word.us;
+  return `
+    <div class="accent-mini">
+      <button class="accent-dot ${state.accent === "uk" ? "active" : ""}" data-accent="uk" type="button">英</button>
+      <button class="accent-dot ${state.accent === "us" ? "active" : ""}" data-accent="us" type="button">美</button>
+    </div>
+    <div class="phonetic-row">
+      <button class="phonetic-pill" data-action="playWord" type="button">${ipa || ""} <span class="spk">🔊</span></button>
+      ${withMic ? `<button class="mic-btn" data-action="record" type="button" aria-label="跟读">🎤</button>` : ""}
+    </div>
+  `;
+}
+
+// 彩色音块：自然拼读用 word.chunks 上色，拆分发音用 word.phonics 音素
+const CHUNK_COLORS = ["#2f6df0", "#e0564f", "#2aa86a", "#8a5cf0", "#e08a1e"];
+function phonicsChunks(word) {
+  return `
+    <div class="phonics-chunks">
+      ${word.chunks.map((chunk, i) => `
+        <div class="phonics-chunk">
+          <span class="pc-letters" style="color:${CHUNK_COLORS[i % CHUNK_COLORS.length]}">${escapeHtml(chunk)}</span>
+          ${word.phonics[i] ? `<span class="pc-ipa">${word.phonics[i]}</span>` : ""}
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderWordDisplay(word) {
-  const chunks = splitWordForColor(word);
   return `
     <div class="word-display">
-      <div class="word"><span class="head">${chunks[0]}</span><span class="tail">${chunks[1]}</span></div>
-      <div class="ipa-row">
-        <span class="ipa-pill">英 ${word.uk}</span>
-        <span class="ipa-pill">美 ${word.us}</span>
-      </div>
-      <div class="accent-row">
-        <button class="accent-btn ${state.accent === "uk" ? "active" : ""}" data-accent="uk" type="button">英式发音</button>
-        <button class="accent-btn ${state.accent === "us" ? "active" : ""}" data-accent="us" type="button">美式发音</button>
+      ${wordGrid(word)}
+      ${phoneticRow(word)}
+    </div>
+  `;
+}
+
+// 自动配图：用 AI 文生图服务按「单词+释义」自动生成一张卡通插画（无需密钥，可热链）。
+function wordImageUrl(word) {
+  const prompt = `simple flat cartoon illustration of ${word.word}, ${(word.cn || "").split(/[；;，,]/)[0]}, kids english flashcard, soft pastel, clean white background, no text`;
+  const seed = word.word.split("").reduce((s, c) => s + c.charCodeAt(0), 0);
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=480&height=360&nologo=true&seed=${seed}`;
+}
+
+// 词根/词缀表：用于「词根助记」拆解，含义为中文。
+const ROOT_PREFIXES = [
+  ["un", "否定 / 不"], ["dis", "否定 / 相反"], ["re", "再次 / 重新"], ["pre", "在前 / 预先"],
+  ["pro", "向前"], ["mis", "错误地"], ["over", "过度"], ["under", "不足 / 在下"], ["inter", "在…之间"],
+  ["trans", "横越 / 转变"], ["sub", "在下 / 次"], ["super", "超级"], ["non", "非"], ["anti", "反对"],
+  ["fore", "前 / 预先"], ["out", "向外 / 超出"], ["en", "使…"], ["em", "使…"], ["de", "去除 / 向下"],
+  ["multi", "多"], ["auto", "自动 / 自己"], ["tele", "远"], ["micro", "微小"], ["semi", "半"]
+];
+const ROOT_SUFFIXES = [
+  ["ation", "名词后缀（动作 / 状态）"], [" tion", "名词后缀"], ["tion", "名词后缀（动作 / 状态）"],
+  ["sion", "名词后缀（动作 / 状态）"], ["ment", "名词后缀（结果 / 状态）"], ["ness", "名词后缀（性质）"],
+  ["ity", "名词后缀（性质）"], ["ship", "名词后缀（身份 / 状态）"], ["hood", "名词后缀（状态）"],
+  ["dom", "名词后缀（领域 / 状态）"], ["ance", "名词后缀"], ["ence", "名词后缀"], ["ist", "名词后缀（人）"],
+  ["ism", "名词后缀（主义）"], ["th", "名词后缀（抽象名词）"], ["er", "名词后缀（人 / 物）"],
+  ["or", "名词后缀（人 / 物）"], ["ful", "形容词后缀（充满…的）"], ["less", "形容词后缀（无…的）"],
+  ["able", "形容词后缀（能…的）"], ["ible", "形容词后缀（能…的）"], ["ous", "形容词后缀（…的）"],
+  ["ive", "形容词后缀（…的）"], ["ical", "形容词后缀（…的）"], ["ic", "形容词后缀（…的）"],
+  ["ly", "副词后缀（…地）"], ["ward", "副词后缀（朝…）"], ["ize", "动词后缀（使…）"],
+  ["ify", "动词后缀（使…）"], ["en", "动词后缀（使…）"]
+];
+
+// 弱后缀：短词干时易误拆，需更严格门槛。
+const WEAK_SUFFIXES = new Set(["th", "er", "or", "en", "ic", "ed", "ly", "ical"]);
+
+// 在给定词汇里检索词干（含常见拼写变化）并返回其中文释义与匹配信息。
+function lookupStem(stem) {
+  if (stem.length < 3) return null;
+  const exact = vocabulary.find((item) => (item.word || "").toLowerCase() === stem);
+  if (exact) return { cn: exact.cn, len: stem.length, exact: true };
+  for (const v of [stem + "e", stem.replace(/([bcdfghjklmnpqrstvwxz])\1$/, "$1"), stem.replace(/i$/, "y")]) {
+    if (v === stem) continue;
+    const hit = vocabulary.find((item) => (item.word || "").toLowerCase() === v);
+    if (hit) return { cn: hit.cn, len: v.length, exact: false };
+  }
+  return null;
+}
+
+// 词根助记：依据词缀表把单词拆成「词缀 + 词干」，并按已学词汇补充词干释义。
+// 仅在词干确实是词库里已有单词、且通过精度门槛时才展示，避免误拆（如 north=nor+th）。
+function wordRoots(word) {
+  const raw = word.word || "";
+  if (/^[A-Z]/.test(raw)) return null; // 跳过专有名词
+  const w = raw.toLowerCase();
+  if (!/^[a-z]{5,}$/.test(w)) return null;
+  for (const [suf, role] of [...ROOT_SUFFIXES].sort((a, b) => b[0].length - a[0].length)) {
+    const s = suf.trim();
+    if (w.length > s.length + 2 && w.endsWith(s)) {
+      const stem = w.slice(0, -s.length);
+      const r = lookupStem(stem);
+      if (!r) continue;
+      if (WEAK_SUFFIXES.has(s) && r.len < 4) continue; // 弱后缀要求词干≥4，过滤 north/better
+      return { parts: [{ text: stem, role: `词根 · ${cleanCn(r.cn)}` }, { text: s, role }], hint: `${word.part} ${word.cn}` };
+    }
+  }
+  for (const [pre, meaning] of [...ROOT_PREFIXES].sort((a, b) => b[0].length - a[0].length)) {
+    if (w.length > pre.length + 2 && w.startsWith(pre)) {
+      const stem = w.slice(pre.length);
+      const r = lookupStem(stem);
+      if (!r) continue;
+      if (!r.exact && r.len < 5) continue; // 前缀+非精确短词干易误拆（如 reach=re+ach）
+      return { parts: [{ text: pre, role: `前缀 · ${meaning}` }, { text: stem, role: `词根 · ${cleanCn(r.cn)}` }], hint: `${word.part} ${word.cn}` };
+    }
+  }
+  return null;
+}
+
+// 清理词干释义里残留的 OCR 噪声（数字页码、星号标注、音标片段），只取主要词义。
+function cleanCn(cn) {
+  return (cn || "")
+    .replace(/\*.*$/, "")
+    .replace(/\/[^/]*\//g, "")
+    .replace(/\(?\d+\)?/g, "")
+    .replace(/\s+/g, " ")
+    .split(/[；;]/)[0]
+    .trim();
+}
+
+function renderRootCard(word) {
+  const roots = wordRoots(word);
+  if (!roots) return "";
+  const parts = roots.parts
+    .map((p) => `<div class="root-part"><strong>${escapeHtml(p.text)}</strong><span>${p.role}</span></div>`)
+    .join('<span class="root-op">+</span>');
+  return `
+    <div class="root-card">
+      <span class="card-tag">词根助记</span>
+      <div class="root-row">
+        ${parts}
+        <span class="root-op">=</span>
+        <div class="root-part result">${roots.hint}</div>
       </div>
     </div>
   `;
@@ -1270,29 +1401,42 @@ function renderWordDisplay(word) {
 
 function renderListenStep(word) {
   return `
-    <div class="teacher-stage">
-      <span class="stage-rank">★ ${studyLevel().rank} 学神领读</span>
-      <div>
-        ${starMascot(118, "teacher-star")}
-        <p style="margin-top:12px;font-weight:900">发音模式 1</p>
-      </div>
+    <div class="listen-head"><span class="stage-rank">★ ${studyLevel().rank} 学神星领读</span></div>
+    ${wordGrid(word)}
+    ${phoneticRow(word)}
+    <div class="word-illustration">
+      <img src="${wordImageUrl(word)}" alt="${escapeHtml(word.word)} 配图" loading="lazy" referrerpolicy="no-referrer"
+           onerror="this.style.display='none';this.parentElement.classList.add('img-failed')" />
+      <div class="illus-fallback">${starMascot(110, "teacher-star")}</div>
     </div>
-    ${renderWordDisplay(word)}
     <div class="meaning-line">${word.part} ${word.cn}</div>
-    <p class="listen-tip">进入本页自动发音，点「英式发音 / 美式发音」可切换并重听。</p>
   `;
 }
 
 function renderLearnStep(word) {
+  const mode = state.studyMode === "phonics" ? "phonics" : "split";
   return `
-    ${renderWordDisplay(word)}
+    ${wordGrid(word)}
+    ${phoneticRow(word, true)}
     <div class="meaning-line">${word.part} ${word.cn}</div>
-    <p class="hint-line">${selectedBook().title} · ${word.unit}</p>
+    <div class="button-row" style="justify-content:center;margin-top:6px">
+      <button class="link-btn" data-action="toggleFullCn" type="button">完整翻译 ⟳</button>
+    </div>
+    ${state.showFullCn ? `<p class="hint-line">${escapeHtml(word.exampleCn || word.cn)}</p>` : ""}
+    <div class="mode-toggle">
+      <button class="mode-btn ${mode === "split" ? "active" : ""}" data-studymode="split" type="button">拆分发音</button>
+      <button class="mode-btn ${mode === "phonics" ? "active" : ""}" data-studymode="phonics" type="button">自然拼读</button>
+    </div>
     <hr class="divider" />
-    <div class="example-card">
+    ${mode === "split"
+      ? `<div class="chip-row">${word.phonics.map((sound, index) => `<span class="sound-chip ${index === 0 ? "active" : ""}">${sound}</span>`).join("")}</div>`
+      : phonicsChunks(word)}
+    ${renderRootCard(word)}
+    <div class="example-card" style="margin-top:22px">
+      <span class="card-tag">实用口语</span>
       <strong>${highlightWord(word.example, word.word)}</strong>
       <p>${word.exampleCn}</p>
-      <div class="button-row" style="justify-content:center;margin-top:16px">
+      <div class="button-row" style="justify-content:center;margin-top:14px">
         <button class="secondary-btn" data-action="playExample" type="button">▶ 例句</button>
         <button class="secondary-btn" data-action="playWord" type="button">▶ 单词</button>
       </div>
@@ -1303,10 +1447,10 @@ function renderLearnStep(word) {
 function renderReadStep(word) {
   return `
     <div class="teacher-stage">
-      <span class="stage-rank">★ ${studyLevel().rank} 学神领读</span>
+      <span class="stage-rank">★ ${studyLevel().rank} 学神星领读</span>
       <div>
         ${starMascot(118, "teacher-star")}
-        <p style="margin-top:12px;font-weight:900">真人领读 · 跟读模式</p>
+        <p style="margin-top:12px;font-weight:900">学神星 IP 领读 · 跟读模式</p>
       </div>
     </div>
     ${renderWordDisplay(word)}
@@ -1376,8 +1520,9 @@ function renderSpellStep(word) {
   return `
     <div class="teacher-stage" style="min-height:160px">
       <div>
-        <div class="meaning-line" style="color:#fff">${word.part} ${word.cn}</div>
-        <p style="margin-top:12px;font-weight:900">${state.accent === "uk" ? word.uk : word.us}</p>
+        ${starMascot(84, "teacher-star")}
+        <div class="meaning-line" style="color:#fff;margin-top:10px">${word.part} ${word.cn}</div>
+        <p style="margin-top:8px;font-weight:900">${state.accent === "uk" ? word.uk : word.us}</p>
       </div>
     </div>
     <div class="letter-slots">${slots}</div>
@@ -1443,6 +1588,7 @@ app.addEventListener("click", (event) => {
   const tabButton = event.target.closest("[data-tab]");
   const bookButton = event.target.closest("[data-book]");
   const stepToggle = event.target.closest("[data-step-toggle]");
+  const studyModeButton = event.target.closest("[data-studymode]");
   const actionButton = event.target.closest("[data-action]");
   const accentButton = event.target.closest("[data-accent]");
   const choiceButton = event.target.closest("[data-choice]");
@@ -1461,6 +1607,11 @@ app.addEventListener("click", (event) => {
   }
   if (stepToggle) {
     togglePlanStep(stepToggle.dataset.stepToggle);
+    render();
+    return;
+  }
+  if (studyModeButton) {
+    state.studyMode = studyModeButton.dataset.studymode;
     render();
     return;
   }
@@ -1543,6 +1694,10 @@ function handleAction(button) {
   }
   if (action === "playWord") speak(currentWord().word);
   if (action === "playExample") speak(currentWord().example);
+  if (action === "toggleFullCn") {
+    state.showFullCn = !state.showFullCn;
+    render();
+  }
   if (action === "playChunks") playChunks(currentWord());
   if (action === "record") startRecognition();
   if (action === "markRead") setStatus("跟读完成，继续下一步。", "success");

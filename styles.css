@@ -1763,6 +1763,44 @@ p {
   }
 }
 
+/* 字母拼块池：正好是单词的全部字母（含重复） */
+.letter-pool {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 16px 12px;
+  border-radius: 16px;
+  background: rgba(227, 225, 234, 0.6);
+}
+
+.letter-tile {
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  height: 54px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--purple-dark);
+  background: #fff;
+  font-size: 24px;
+  font-weight: 900;
+  text-transform: lowercase;
+  box-shadow: 0 6px 12px rgba(73, 68, 82, 0.12);
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.letter-tile:active {
+  transform: translateY(2px) scale(0.96);
+}
+
+.letter-tile.used {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .status-line {
   min-height: 28px;
   margin-top: 14px;

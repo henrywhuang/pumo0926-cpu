@@ -5,7 +5,7 @@ const STEP_DEFS = [
   { id: "translate", label: "译", title: "选释义", desc: "根据英文选择中文意思。" },
   { id: "split", label: "拆分", title: "拆分发音", desc: "按音节和词块理解单词。" },
   { id: "spellread", label: "拼读", title: "词块拼读", desc: "把拆开的词块拼回完整单词。" },
-  { id: "spell", label: "拼写", title: "键盘拼写", desc: "从浮出的键盘字母里点出正确拼写。" }
+  { id: "spell", label: "拼写", title: "字母拼写", desc: "从字母拼块里按顺序点出正确拼写（含重复字母）。" }
 ];
 
 const REVIEW_INTERVALS = [
@@ -114,6 +114,9 @@ const state = {
   session: null,
   pickedChunks: [],
   pickedLetters: [],
+  letterPool: [],
+  letterPoolWordId: "",
+  pickedTileIndices: [],
   status: "",
   statusType: "",
   choiceAnswered: false,
@@ -1635,6 +1638,7 @@ function renderSpellReadStep(word) {
 }
 
 function renderSpellStep(word) {
+  ensureLetterPool(word);
   const letters = wordLetters(word);
   const slots = letters.map((letter, index) => `<span class="letter-slot ${state.pickedLetters[index] ? "" : "empty"}">${state.pickedLetters[index] || letter}</span>`).join("");
   return `
@@ -1646,8 +1650,9 @@ function renderSpellStep(word) {
       </div>
     </div>
     <div class="letter-slots">${slots}</div>
-    ${renderKeyboard(word)}
-    <div class="button-row" style="justify-content:center;margin-top:16px">
+    ${renderLetterPool(word)}
+    <p class="hint-line">单词共 ${letters.length} 个字母，按顺序点出正确拼写（重复字母会出现相同个数）。</p>
+    <div class="button-row" style="justify-content:center;margin-top:12px">
       <button class="secondary-btn" data-action="deleteLetter" type="button">⌫ 删除</button>
       <button class="secondary-btn" data-action="hintLetter" type="button">提示</button>
       <button class="danger-btn" data-action="clearLetters" type="button">清空</button>
@@ -1655,17 +1660,24 @@ function renderSpellStep(word) {
   `;
 }
 
-function renderKeyboard(word) {
+// 字母拼块池：正好是单词的全部字母（含重复、打乱），重复字母出现相同个数。
+function ensureLetterPool(word) {
+  if (state.letterPoolWordId !== word.id) {
+    state.letterPool = shuffle(wordLetters(word));
+    state.letterPoolWordId = word.id;
+    state.pickedLetters = [];
+    state.pickedTileIndices = [];
+  }
+}
+
+function renderLetterPool(word) {
+  ensureLetterPool(word);
   return `
-    <div class="keyboard">
-      ${qwertyRows.map((row) => `
-        <div class="key-row">
-          ${row.split("").map((letter) => {
-            const enabled = canUseLetter(word, letter);
-            return `<button class="key ${enabled ? "enabled" : ""}" data-key="${letter}" type="button" ${enabled ? "" : "disabled"}>${letter}</button>`;
-          }).join("")}
-        </div>
-      `).join("")}
+    <div class="letter-pool">
+      ${state.letterPool.map((letter, i) => {
+        const used = state.pickedTileIndices.includes(i);
+        return `<button class="letter-tile ${used ? "used" : ""}" data-tile="${i}" type="button" ${used ? "disabled" : ""}>${letter}</button>`;
+      }).join("")}
     </div>
   `;
 }
@@ -1714,7 +1726,7 @@ app.addEventListener("click", (event) => {
   const choiceButton = event.target.closest("[data-choice]");
   const chunkButton = event.target.closest("[data-chunk]");
   const phonicButton = event.target.closest("[data-phonic]");
-  const keyButton = event.target.closest("[data-key]");
+  const tileButton = event.target.closest("[data-tile]");
 
   if (phonicButton) {
     const word = currentWord();
@@ -1757,8 +1769,8 @@ app.addEventListener("click", (event) => {
     pickChunk(chunkButton.dataset.chunk);
     return;
   }
-  if (keyButton) {
-    pickLetter(keyButton.dataset.key);
+  if (tileButton) {
+    pickTile(Number(tileButton.dataset.tile));
     return;
   }
   if (!actionButton) return;
@@ -1846,12 +1858,14 @@ function handleAction(button) {
   if (action === "hintChunk") hintChunk();
   if (action === "deleteLetter") {
     state.pickedLetters.pop();
+    state.pickedTileIndices.pop();
     setStatus("已删除一个字母。");
     render();
   }
   if (action === "hintLetter") hintLetter();
   if (action === "clearLetters") {
     state.pickedLetters = [];
+    state.pickedTileIndices = [];
     setStatus("已清空拼写。");
     render();
   }
@@ -2046,6 +2060,8 @@ function setStatus(text, type = "") {
 function resetExerciseState() {
   state.pickedChunks = [];
   state.pickedLetters = [];
+  state.pickedTileIndices = [];
+  state.letterPoolWordId = "";
   state.status = "";
   state.statusType = "";
   state.choiceAnswered = false;
@@ -2180,17 +2196,14 @@ function wordLetters(word) {
   return word.word.toLowerCase().replace(/[^a-z]/g, "").split("");
 }
 
-function canUseLetter(word, letter) {
-  const letters = wordLetters(word);
-  const needed = letters.filter((item) => item === letter).length;
-  const used = state.pickedLetters.filter((item) => item === letter).length;
-  return needed > used;
-}
-
-function pickLetter(letter) {
+// 点字母拼块：按池中位置取字母（重复字母各自独立），填入下一个空槽。
+function pickTile(index) {
   const word = currentWord();
-  if (!canUseLetter(word, letter)) return;
-  state.pickedLetters.push(letter);
+  ensureLetterPool(word);
+  if (index < 0 || index >= state.letterPool.length) return;
+  if (state.pickedTileIndices.includes(index)) return;
+  state.pickedTileIndices.push(index);
+  state.pickedLetters.push(state.letterPool[index]);
   const answer = state.pickedLetters.join("");
   const target = wordLetters(word).join("");
   if (state.pickedLetters.length === target.length) {
@@ -2199,6 +2212,7 @@ function pickLetter(letter) {
     if (!correct) {
       setTimeout(() => {
         state.pickedLetters = [];
+        state.pickedTileIndices = [];
         render();
       }, 700);
     }
@@ -2210,9 +2224,11 @@ function pickLetter(letter) {
 
 function hintLetter() {
   const word = currentWord();
-  const target = wordLetters(word);
-  const next = target[state.pickedLetters.length];
-  if (next) pickLetter(next);
+  ensureLetterPool(word);
+  const next = wordLetters(word)[state.pickedLetters.length];
+  if (!next) return;
+  const tile = state.letterPool.findIndex((letter, i) => letter === next && !state.pickedTileIndices.includes(i));
+  if (tile >= 0) pickTile(tile);
 }
 
 // 嗓音名关键词：英式取男声、美式取女声；不同系统/浏览器命名各异，尽量覆盖常见嗓音。

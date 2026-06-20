@@ -12,9 +12,9 @@ const REVIEW_INTERVALS = [
   { days: 1, name: "速刷复习", steps: ["translate"], note: "第 1 天快速回忆" },
   { days: 2, name: "巩固复习", steps: ["translate", "split", "spell"], note: "第 2 天巩固词义和拼写" },
   { days: 4, name: "巩固复习", steps: ["translate", "split", "spell"], note: "第 4 天再次巩固" },
-  { days: 7, name: "深度复习", steps: ["listen", "read", "translate", "split", "spellread", "spell"], note: "第 7 天深度复习" },
-  { days: 15, name: "深度复习", steps: ["listen", "read", "translate", "split", "spellread", "spell"], note: "第 15 天深度复习" },
-  { days: 30, name: "深度复习", steps: ["listen", "read", "translate", "split", "spellread", "spell"], note: "第 30 天长期记忆" }
+  { days: 7, name: "深度复习", steps: ["listen", "learn", "read", "translate", "split", "spellread", "spell"], note: "第 7 天深度复习" },
+  { days: 15, name: "深度复习", steps: ["listen", "learn", "read", "translate", "split", "spellread", "spell"], note: "第 15 天深度复习" },
+  { days: 30, name: "深度复习", steps: ["listen", "learn", "read", "translate", "split", "spellread", "spell"], note: "第 30 天长期记忆" }
 ];
 
 const publishers = ["人教版", "外研版", "译林版", "北师大版", "冀教版", "科普版", "沪教版", "沪外教版", "沪教牛津版", "仁爱版", "鲁教版", "教科版"];
@@ -139,6 +139,7 @@ if (new URLSearchParams(window.location.search).get("demo") === "1") seedDemoPro
 loadRealWordbook();
 loadCoverMap();
 initAuth();
+warmVoices();
 
 function w(word, cn, part, grade, unit, uk, us, chunks, phonics, example, exampleCn) {
   return {
@@ -509,7 +510,17 @@ function splitWordIntoChunks(text) {
 }
 
 function loadProgress() {
-  const fallback = {
+  const fallback = emptyProgress();
+  try {
+    const saved = JSON.parse(localStorage.getItem("superWordV2"));
+    return normalizeProgress(saved || fallback);
+  } catch {
+    return fallback;
+  }
+}
+
+function emptyProgress() {
+  return {
     plan: null,
     importedBooks: {},
     assignments: {},
@@ -517,12 +528,6 @@ function loadProgress() {
     completedToday: 0,
     today: todayKey()
   };
-  try {
-    const saved = JSON.parse(localStorage.getItem("superWordV2"));
-    return normalizeProgress(saved || fallback);
-  } catch {
-    return fallback;
-  }
 }
 
 function normalizeProgress(progress) {
@@ -545,6 +550,29 @@ function saveProgress() {
   state.progress = normalizeProgress(state.progress);
   localStorage.setItem("superWordV2", JSON.stringify(state.progress));
   scheduleProgressSync("progress_saved");
+}
+
+function resetLearningProgress() {
+  state.progress = normalizeProgress(emptyProgress());
+  state.screen = "setup";
+  localStorage.setItem("superWordV2", JSON.stringify(state.progress));
+
+  if ((STATIC_DEMO_ONLY || state.auth.demoMode) && state.auth.user?.id) {
+    const progress = readDemoStore(DEMO_AUTH_KEYS.progress, {});
+    progress[state.auth.user.id] = {
+      value: state.progress,
+      updatedAt: new Date().toISOString()
+    };
+    writeDemoStore(DEMO_AUTH_KEYS.progress, progress);
+  }
+
+  syncProgress("reset_progress")
+    .then(() => refreshAnalytics())
+    .then(() => {
+      if (state.screen === "setup") render();
+    })
+    .catch(() => {});
+  render();
 }
 
 function seedDemoProgress() {
@@ -728,6 +756,36 @@ function studyLevel() {
   return { rank, name, learned, floor, ceil, progress, remain };
 }
 
+// 即时奖励飘字：挂在 body 上，自播自删，不受 #app 重绘影响
+function popReward(text) {
+  const el = document.createElement("div");
+  el.className = "reward-pop";
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1100);
+}
+
+// 升星庆祝浮层：跨越 R/SR/SSR 阶梯时弹出，强化养成成就感
+function celebrateLevelUp(level) {
+  const overlay = document.createElement("div");
+  overlay.className = "levelup-overlay";
+  overlay.innerHTML = `
+    <div class="levelup-card" role="dialog" aria-label="学神升级">
+      <span class="levelup-spark s1">✦</span>
+      <span class="levelup-spark s2">✧</span>
+      <span class="levelup-spark s3">★</span>
+      <div class="levelup-rank">${level.rank}</div>
+      ${starMascot(120, "levelup-star")}
+      <strong>升级！${level.name}</strong>
+      <p>已掌握 ${level.learned} 词，解锁全新学神形象 ✨</p>
+      <button class="primary-btn" type="button">继续冲刺 →</button>
+    </div>`;
+  const close = () => overlay.remove();
+  overlay.addEventListener("click", close);
+  document.body.appendChild(overlay);
+  setTimeout(close, 4600);
+}
+
 function renderBrandPanel() {
   const total = selectedWords().length;
   const learned = selectedWords().filter((word) => state.progress.records[word.id]?.learned).length;
@@ -852,7 +910,7 @@ function renderSetup() {
         </div>
         ${selectedCount > 0 ? "" : `<p class="plan-hint">当前册次暂无可用词表，请在「选择单词书」中换一本。</p>`}
         <div class="range-row">
-          <input id="dailyCount" type="range" min="2" max="20" step="1" value="${plan.dailyCount}" />
+          <input id="dailyCount" type="range" min="1" max="20" step="1" value="${plan.dailyCount}" />
           <div class="daily-number" id="dailyCountText">${plan.dailyCount}</div>
         </div>
         <div class="section-head">
@@ -907,7 +965,7 @@ function renderTasks() {
         </div>
         <div class="task-list">
           ${renderTaskCard("new", "▣", `今日新学 (${tasks.newWords.length}/${currentPlan().dailyCount}词)`, `今天学习的 ${tasks.newWords.length} 个词汇需要进行今日新学。`, planSteps(), tasks.newWords.length ? "进行中" : "已完成")}
-          ${renderTaskCard("deep", "▤", `任务一：深度复习 (${tasks.deep.length}词)`, reviewText(tasks.deep, "7/15/30 天"), ["listen", "read", "learn", "translate", "split", "spellread", "spell"], tasks.deep.length ? "可学习" : "待解锁", !tasks.deep.length)}
+          ${renderTaskCard("deep", "▤", `任务一：深度复习 (${tasks.deep.length}词)`, reviewText(tasks.deep, "7/15/30 天"), REVIEW_INTERVALS[3].steps, tasks.deep.length ? "可学习" : "待解锁", !tasks.deep.length)}
           ${renderTaskCard("solid", "▥", `任务二：巩固复习 (${tasks.solid.length}词)`, reviewText(tasks.solid, "2/4 天"), ["translate", "split", "spell"], tasks.solid.length ? "可学习" : "待解锁", !tasks.solid.length)}
           ${renderTaskCard("quick", "▦", `任务三：速刷复习 (${tasks.quick.length}词)`, reviewText(tasks.quick, "1 天"), ["translate"], tasks.quick.length ? "可学习" : "待解锁", !tasks.quick.length)}
         </div>
@@ -1292,6 +1350,8 @@ function bindDynamicInputs() {
     render();
   });
   daily?.addEventListener("input", (event) => {
+    ensureDraftPlan();
+    state.progress.plan.dailyCount = Number(event.target.value);
     document.querySelector("#dailyCountText").textContent = event.target.value;
   });
 }
@@ -1383,10 +1443,7 @@ function handleAction(button) {
     render();
   }
   if (action === "resetProgress") {
-    localStorage.removeItem("superWordV2");
-    state.progress = loadProgress();
-    state.screen = "setup";
-    render();
+    resetLearningProgress();
   }
   if (action === "startTask") startTask(button.dataset.task);
   if (action === "showWordList") toggleWordList();
@@ -1665,6 +1722,8 @@ function completeCurrentWord() {
   const word = currentWord();
   const today = todayKey();
   const existing = state.progress.records[word.id] || {};
+  const wasLearned = !!existing.learned;
+  const beforeRank = studyLevel().rank;
   const record = {
     learned: true,
     firstLearned: existing.firstLearned || today,
@@ -1683,6 +1742,12 @@ function completeCurrentWord() {
   state.progress.records[word.id] = record;
   if (state.session.type === "new") state.progress.completedToday += 1;
   saveProgress();
+  // 即时正反馈 + 升星庆祝
+  popReward(state.session.type === "new" ? "+1 ⭐" : "+1 ⭐ 复习");
+  const afterLevel = studyLevel();
+  if (!wasLearned && afterLevel.rank !== beforeRank) {
+    celebrateLevelUp(afterLevel);
+  }
   trackEvent("word_completed", {
     taskType: state.session.type,
     bookId: currentPlan()?.bookId || "",
@@ -1772,6 +1837,33 @@ function hintLetter() {
   if (next) pickLetter(next);
 }
 
+// 嗓音名关键词：英式取男声、美式取女声；不同系统/浏览器命名各异，尽量覆盖常见嗓音。
+const VOICE_HINTS = {
+  male: ["male", "daniel", "arthur", "george", "oliver", "thomas", "rishi", "alex", "fred", "gordon", "david", "mark", "james", "ryan", "guy"],
+  female: ["female", "samantha", "karen", "moira", "tessa", "victoria", "fiona", "kate", "serena", "susan", "zira", "hazel", "ava", "allison", "joanna", "aria", "jenny", "google us english"]
+};
+
+function warmVoices() {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.addEventListener("voiceschanged", () => window.speechSynthesis.getVoices());
+}
+
+// 按口音挑选嗓音：英式→男声、美式→女声；优先本口音+性别匹配，逐级回退。
+// 返回 { voice, gendered }：gendered 表示是否真的命中了对应性别的嗓音。
+function pickVoice(accent) {
+  const voices = window.speechSynthesis.getVoices() || [];
+  if (!voices.length) return { voice: null, gendered: false };
+  const wantUk = accent === "uk";
+  const hints = VOICE_HINTS[wantUk ? "male" : "female"];
+  const langPrefix = wantUk ? "en-gb" : "en-us";
+  const byLang = voices.filter((v) => (v.lang || "").toLowerCase().replace("_", "-").startsWith(langPrefix));
+  const anyEn = voices.filter((v) => (v.lang || "").toLowerCase().startsWith("en"));
+  const matchGender = (list) => list.find((v) => hints.some((h) => (v.name || "").toLowerCase().includes(h)));
+  const gendered = matchGender(byLang) || matchGender(anyEn);
+  return { voice: gendered || byLang[0] || anyEn[0] || null, gendered: Boolean(gendered) };
+}
+
 function speak(text, rate = 0.86) {
   if (!("speechSynthesis" in window)) {
     setStatus("当前浏览器不支持发音播放。", "error");
@@ -1779,9 +1871,22 @@ function speak(text, rate = 0.86) {
   }
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = state.accent === "uk" ? "en-GB" : "en-US";
+  const isUk = state.accent === "uk";
+  const { voice, gendered } = pickVoice(isUk ? "uk" : "us");
+  if (voice) {
+    utter.voice = voice;
+    utter.lang = voice.lang;
+  } else {
+    utter.lang = isUk ? "en-GB" : "en-US";
+  }
   utter.rate = rate;
-  utter.pitch = 1;
+  // 英式偏男声(低音高)、美式偏女声(高音高)。
+  // 命中真·性别嗓音时温和微调即可；只有通用/单一嗓音时加大音高差，保证能听出男女区别。
+  if (gendered) {
+    utter.pitch = isUk ? 0.92 : 1.12;
+  } else {
+    utter.pitch = isUk ? 0.75 : 1.35;
+  }
   window.speechSynthesis.speak(utter);
 }
 

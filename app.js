@@ -92,6 +92,13 @@ let vocabulary = [
 
 const qwertyRows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 const API_BASE = "";
+const STATIC_DEMO_ONLY = location.hostname.endsWith(".github.io") || location.hostname === "github.io" || new URLSearchParams(location.search).get("staticDemo") === "1";
+const DEMO_AUTH_KEYS = {
+  users: "superWordDemoUsers",
+  sessions: "superWordDemoSessions",
+  progress: "superWordDemoProgress",
+  events: "superWordDemoEvents"
+};
 
 const state = {
   screen: "tasks",
@@ -118,6 +125,7 @@ const state = {
     busy: false,
     ready: false,
     backendOnline: true,
+    demoMode: false,
     lastSyncAt: ""
   }
 };
@@ -198,6 +206,10 @@ async function initAuth() {
 }
 
 async function apiRequest(path, options = {}) {
+  if (STATIC_DEMO_ONLY) {
+    state.auth.backendOnline = false;
+    return demoApiRequest(path, options);
+  }
   const headers = {
     "Content-Type": "application/json",
     ...(options.headers || {})
@@ -212,12 +224,226 @@ async function apiRequest(path, options = {}) {
     });
   } catch {
     state.auth.backendOnline = false;
-    throw new Error("后端服务未连接，请使用 node server.js 启动 H5 后端。");
+    return demoApiRequest(path, options);
+  }
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json") || response.status === 404) {
+    state.auth.backendOnline = false;
+    return demoApiRequest(path, options);
   }
   state.auth.backendOnline = true;
+  state.auth.demoMode = false;
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.message || "请求失败");
   return data;
+}
+
+async function demoApiRequest(path, options = {}) {
+  state.auth.demoMode = true;
+  const method = String(options.method || "GET").toUpperCase();
+  const body = typeof options.body === "string" ? JSON.parse(options.body || "{}") : (options.body || {});
+
+  if (method === "POST" && path === "/api/auth/register") return demoRegister(body);
+  if (method === "POST" && path === "/api/auth/login") return demoLogin(body);
+  if (method === "POST" && path === "/api/auth/logout") return demoLogout();
+  if (method === "GET" && path === "/api/auth/me") return { user: demoRequireUser() };
+  if (method === "GET" && path === "/api/progress") return demoGetProgress();
+  if (method === "POST" && path === "/api/progress") return demoSaveProgress(body);
+  if (method === "POST" && path === "/api/events") return demoSaveEvent(body);
+  if (method === "GET" && path === "/api/analytics/me") return demoMyAnalytics();
+  if (method === "GET" && path === "/api/admin/analytics") return demoAdminAnalytics();
+
+  throw new Error("请求失败");
+}
+
+function demoRegister(body) {
+  const name = String(body.name || "").trim();
+  const email = normalizeDemoEmail(body.email);
+  const password = String(body.password || "");
+  if (name.length < 2) throw new Error("请输入至少 2 个字的昵称");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("请输入有效邮箱");
+  if (password.length < 6) throw new Error("密码至少 6 位");
+
+  const users = readDemoStore(DEMO_AUTH_KEYS.users, []);
+  if (users.some((user) => user.email === email)) throw new Error("该邮箱已注册");
+  const user = {
+    id: demoId(),
+    name,
+    email,
+    password: demoPassword(password),
+    createdAt: new Date().toISOString(),
+    lastLoginAt: new Date().toISOString()
+  };
+  users.push(user);
+  writeDemoStore(DEMO_AUTH_KEYS.users, users);
+  const token = createDemoSession(user.id);
+  appendDemoEvent(user.id, "register", { source: "static-demo" });
+  return { token, user: publicDemoUser(user) };
+}
+
+function demoLogin(body) {
+  const email = normalizeDemoEmail(body.email);
+  const password = String(body.password || "");
+  const users = readDemoStore(DEMO_AUTH_KEYS.users, []);
+  const user = users.find((item) => item.email === email);
+  if (!user || user.password !== demoPassword(password)) throw new Error("邮箱或密码不正确");
+  user.lastLoginAt = new Date().toISOString();
+  writeDemoStore(DEMO_AUTH_KEYS.users, users);
+  const token = createDemoSession(user.id);
+  appendDemoEvent(user.id, "login", { source: "static-demo" });
+  return { token, user: publicDemoUser(user) };
+}
+
+function demoLogout() {
+  const token = state.auth.token;
+  const sessions = readDemoStore(DEMO_AUTH_KEYS.sessions, []);
+  writeDemoStore(DEMO_AUTH_KEYS.sessions, sessions.filter((session) => session.token !== token));
+  return { ok: true };
+}
+
+function demoRequireUser() {
+  const token = state.auth.token;
+  const sessions = readDemoStore(DEMO_AUTH_KEYS.sessions, []);
+  const session = sessions.find((item) => item.token === token && new Date(item.expiresAt).getTime() > Date.now());
+  if (!session) throw new Error("登录已过期，请重新登录");
+  const users = readDemoStore(DEMO_AUTH_KEYS.users, []);
+  const user = users.find((item) => item.id === session.userId);
+  if (!user) throw new Error("用户不存在");
+  return publicDemoUser(user);
+}
+
+function demoGetProgress() {
+  const user = demoRequireUser();
+  const progress = readDemoStore(DEMO_AUTH_KEYS.progress, {});
+  return { progress: progress[user.id] || null };
+}
+
+function demoSaveProgress(body) {
+  const user = demoRequireUser();
+  const progress = readDemoStore(DEMO_AUTH_KEYS.progress, {});
+  const updatedAt = new Date().toISOString();
+  progress[user.id] = { value: body.progress || {}, updatedAt };
+  writeDemoStore(DEMO_AUTH_KEYS.progress, progress);
+  appendDemoEvent(user.id, "progress_sync", {
+    learnedCount: Object.values(body.progress?.records || {}).filter((record) => record?.learned).length,
+    planBookId: body.progress?.plan?.bookId || ""
+  });
+  return { ok: true, updatedAt };
+}
+
+function demoSaveEvent(body) {
+  const user = demoRequireUser();
+  appendDemoEvent(user.id, String(body.type || "event"), body.payload || {});
+  return { ok: true };
+}
+
+function demoMyAnalytics() {
+  const user = demoRequireUser();
+  const events = readDemoStore(DEMO_AUTH_KEYS.events, []).filter((event) => event.userId === user.id);
+  return { analytics: buildDemoUserAnalytics(user, events) };
+}
+
+function demoAdminAnalytics() {
+  demoRequireUser();
+  const users = readDemoStore(DEMO_AUTH_KEYS.users, []);
+  const events = readDemoStore(DEMO_AUTH_KEYS.events, []);
+  const userRows = users.map((user) => buildDemoUserAnalytics(publicDemoUser(user), events.filter((event) => event.userId === user.id)));
+  return {
+    analytics: {
+      totalUsers: users.length,
+      totalEvents: events.length,
+      activeUsersToday: new Set(events.filter((event) => event.day === todayKey()).map((event) => event.userId)).size,
+      dailyActive: groupDemoEventsByDay(events),
+      users: userRows.sort((a, b) => String(b.lastActiveAt || "").localeCompare(String(a.lastActiveAt || "")))
+    }
+  };
+}
+
+function buildDemoUserAnalytics(user, events) {
+  return {
+    user,
+    totalEvents: events.length,
+    activeDays: new Set(events.map((event) => event.day)).size,
+    learnedWords: events.filter((event) => event.type === "word_completed" && event.payload?.taskType === "new").length,
+    reviewedWords: events.filter((event) => event.type === "word_completed" && event.payload?.taskType !== "new").length,
+    taskStarts: events.filter((event) => event.type === "task_started").length,
+    lastActiveAt: events.at(-1)?.createdAt || user.lastLoginAt || user.createdAt,
+    daily: groupDemoEventsByDay(events)
+  };
+}
+
+function groupDemoEventsByDay(events) {
+  const map = new Map();
+  for (const event of events) {
+    if (!map.has(event.day)) map.set(event.day, { day: event.day, events: 0, learnedWords: 0, reviews: 0, taskStarts: 0 });
+    const row = map.get(event.day);
+    row.events += 1;
+    if (event.type === "word_completed" && event.payload?.taskType === "new") row.learnedWords += 1;
+    if (event.type === "word_completed" && event.payload?.taskType !== "new") row.reviews += 1;
+    if (event.type === "task_started") row.taskStarts += 1;
+  }
+  return [...map.values()].sort((a, b) => a.day.localeCompare(b.day));
+}
+
+function appendDemoEvent(userId, type, payload = {}) {
+  const events = readDemoStore(DEMO_AUTH_KEYS.events, []);
+  events.push({
+    id: demoId(),
+    userId,
+    type,
+    payload,
+    day: todayKey(),
+    createdAt: new Date().toISOString()
+  });
+  writeDemoStore(DEMO_AUTH_KEYS.events, events.slice(-5000));
+}
+
+function createDemoSession(userId) {
+  const sessions = readDemoStore(DEMO_AUTH_KEYS.sessions, []);
+  const token = `demo_${demoId()}`;
+  sessions.push({
+    token,
+    userId,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString()
+  });
+  writeDemoStore(DEMO_AUTH_KEYS.sessions, sessions.filter((item) => new Date(item.expiresAt).getTime() > Date.now()));
+  return token;
+}
+
+function publicDemoUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    createdAt: user.createdAt,
+    lastLoginAt: user.lastLoginAt
+  };
+}
+
+function readDemoStore(key, fallback) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
+  } catch {
+    return fallback;
+  }
+}
+
+function writeDemoStore(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function normalizeDemoEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function demoPassword(password) {
+  return btoa(unescape(encodeURIComponent(String(password || ""))));
+}
+
+function demoId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 async function loadRemoteProgress() {
@@ -452,7 +678,8 @@ function renderAuth() {
         <div class="eyebrow">H5 User Center</div>
         <h1>初中词汇<br />超级单词表</h1>
         <p>注册登录后使用学习计划、七步学练和复习任务，系统会保留学习记录并生成活跃度数据。</p>
-        ${state.auth.backendOnline ? "" : `<div class="auth-alert">后端服务未连接，请使用 <code>node server.js</code> 启动后再登录。</div>`}
+        ${state.auth.demoMode ? `<div class="auth-alert auth-alert-soft">当前为静态 demo 体验，数据保存在本机浏览器。</div>` : ""}
+        ${!state.auth.demoMode && !state.auth.backendOnline ? `<div class="auth-alert">后端服务未连接，请使用 <code>node server.js</code> 启动 H5 后端，或继续使用静态 demo。</div>` : ""}
         ${state.auth.error ? `<div class="auth-alert">${escapeHtml(state.auth.error)}</div>` : ""}
         <form class="auth-form" data-auth-form="${isRegister ? "register" : "login"}">
           ${isRegister ? `<label>昵称<input class="input" name="name" autocomplete="name" placeholder="学生昵称" required /></label>` : ""}
@@ -490,7 +717,7 @@ function renderBrandPanel() {
       <div class="account-card">
         <strong>${escapeHtml(state.auth.user?.name || "已登录")}</strong>
         <span>${escapeHtml(state.auth.user?.email || "")}</span>
-        <small>${state.auth.lastSyncAt ? `最近同步 ${state.auth.lastSyncAt}` : "学习记录将自动同步"}</small>
+        <small>${state.auth.demoMode ? "静态 demo 数据保存在本机" : (state.auth.lastSyncAt ? `最近同步 ${state.auth.lastSyncAt}` : "学习记录将自动同步")}</small>
         <div class="account-actions">
           <button class="secondary-btn" data-action="syncNow" type="button">同步</button>
           <button class="ghost-btn" data-action="logout" type="button">退出</button>

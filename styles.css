@@ -567,6 +567,12 @@ p {
   line-height: 1.45;
 }
 
+.auth-alert-soft {
+  border-color: rgba(42, 130, 95, 0.18);
+  color: #27664a;
+  background: #f2fbf6;
+}
+
 .auth-alert code {
   padding: 1px 4px;
   border-radius: 4px;

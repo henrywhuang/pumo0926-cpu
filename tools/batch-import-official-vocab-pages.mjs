@@ -100,10 +100,9 @@ function selectVocabularyPages(pages) {
   let started = false;
   let silence = 0;
   for (const page of pages) {
-    const text = page.lines.map((line) => line.text).join(" ");
-    const starts = /Vocabulary in Each Unit|Words and Expressions|Word List|Wordlist|单词表|词汇表/i.test(text);
-    const stop = /Vocabulary A-Z|Vocabulary from Primary School|Irregular Verbs|Tapescripts|Appendix/i.test(text);
-    if (!started && starts && /Unit\s*[1-9S]|Module\s*[1-9]|Lesson\s*[1-9]/i.test(text)) started = true;
+    const starts = isVocabularyStartPage(page);
+    const stop = isVocabularyStopPage(page);
+    if (!started && starts) started = true;
     if (started && stop) break;
     if (started) {
       const hasEntry = page.lines.some((line) => isEntryStart(cleanText(line.text)) || readUnit(cleanText(line.text)));
@@ -117,6 +116,21 @@ function selectVocabularyPages(pages) {
     }
   }
   return result;
+}
+
+function isVocabularyStartPage(page) {
+  const text = page.lines.map((line) => line.text).join(" ");
+  const normalized = cleanText(text);
+  if (/Vocabulary practice|Building your vocabulary|vocabulary notebook|words and expressions from/i.test(normalized)) return false;
+  if (/Vocabulary in Each Unit|Word List|Wordlist|单词表|词汇表/i.test(normalized)) return true;
+  if (/Words and expressions(?!\s+from\b)/i.test(normalized) && /Unit\s*[1-9S]|Module\s*[1-9]|Lesson\s*[1-9]/i.test(normalized)) return true;
+  if (/\bVocabulary\s*[（(]?\s*(?:I|II|1|2|Ⅰ|Ⅱ)\s*[）)]?/i.test(normalized)) return true;
+  return false;
+}
+
+function isVocabularyStopPage(page) {
+  const text = page.lines.map((line) => line.text).join(" ");
+  return /Irregular Verbs|Tapescripts|Pronunciation guide/i.test(text);
 }
 
 function parseBook(book, pages) {
@@ -133,6 +147,8 @@ function parseBook(book, pages) {
         if (unit) {
           currentUnit = unit;
           currentEntry = null;
+          const afterUnit = text.replace(/^(Unit|Module|Lesson)\s*([1-9S])\b[:：\s]*/i, "").trim();
+          if (afterUnit && isEntryStart(afterUnit)) currentEntry = { unit: currentUnit, raw: afterUnit };
           continue;
         }
         if (!currentUnit) currentUnit = "Book Vocabulary";
@@ -280,6 +296,8 @@ function candidateScore(book) {
   let score = Date.parse(book.updateTime.replace(/([+-]\d{2})(\d{2})$/, "$1:$2")) || 0;
   if (/根据2022年版课程标准修订/.test(book.sourceTitle)) score += 10_000_000_000_000;
   if (book.mappingMethod === "official-material-asset") score += 1_000_000_000;
+  if (book.pageCount < 100) score -= 5_000_000_000_000;
+  score += book.pageCount * 1_000_000;
   if (/五四学制/.test(book.sourceTitle)) score -= 20_000_000_000_000;
   return score;
 }
@@ -367,7 +385,7 @@ function splitColumns(lines) {
 }
 
 function readUnit(text) {
-  const match = text.match(/^(Unit|Module|Lesson)\s*([1-9S])$/i);
+  const match = text.match(/^(Unit|Module|Lesson)\s*([1-9S])\b/i);
   if (!match) return "";
   const label = match[1][0].toUpperCase() + match[1].slice(1).toLowerCase();
   return `${label} ${match[2].toUpperCase() === "S" ? "5" : match[2]}`;

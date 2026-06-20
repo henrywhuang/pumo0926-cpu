@@ -96,7 +96,7 @@ const state = {
   screen: "tasks",
   systemFilter: "六三制",
   gradeFilter: "全部",
-  bookQuery: "",
+  publisherFilter: "全部",
   selectedBookId: books[0].id,
   accent: "us",
   session: null,
@@ -350,8 +350,8 @@ function renderSetup() {
   const filteredBooks = books.filter((book) => {
     const matchSystem = book.system === state.systemFilter;
     const matchGrade = state.gradeFilter === "全部" || book.grade === state.gradeFilter;
-    const text = `${book.title} ${book.subtitle}`.toLowerCase();
-    return matchSystem && matchGrade && text.includes(state.bookQuery.trim().toLowerCase());
+    const matchPublisher = state.publisherFilter === "全部" || book.publisher === state.publisherFilter;
+    return matchSystem && matchGrade && matchPublisher;
   });
   const plan = currentPlan() || {
     bookId: state.selectedBookId,
@@ -376,7 +376,9 @@ function renderSetup() {
         <select class="select" id="gradeFilter" aria-label="选择年级册次">
           ${["全部", ...gradeSystems[state.systemFilter]].map((grade) => `<option value="${grade}" ${state.gradeFilter === grade ? "selected" : ""}>${grade}</option>`).join("")}
         </select>
-        <input class="input" id="bookSearch" value="${escapeHtml(state.bookQuery)}" placeholder="搜索：人教版 / 外研版 / 八年级上" />
+        <select class="select" id="publisherFilter" aria-label="选择教材版本">
+          ${["全部", ...publishers].map((publisher) => `<option value="${publisher}" ${state.publisherFilter === publisher ? "selected" : ""}>${publisher === "全部" ? "全部版本" : publisher}</option>`).join("")}
+        </select>
       </div>
       <div class="book-grid">
         ${filteredBooks.map((book) => `
@@ -782,7 +784,7 @@ function renderKeyboard(word) {
 function bindDynamicInputs() {
   const system = document.querySelector("#systemFilter");
   const grade = document.querySelector("#gradeFilter");
-  const search = document.querySelector("#bookSearch");
+  const publisher = document.querySelector("#publisherFilter");
   const daily = document.querySelector("#dailyCount");
   system?.addEventListener("change", (event) => {
     state.systemFilter = event.target.value;
@@ -802,8 +804,8 @@ function bindDynamicInputs() {
     state.gradeFilter = event.target.value;
     render();
   });
-  search?.addEventListener("input", (event) => {
-    state.bookQuery = event.target.value;
+  publisher?.addEventListener("change", (event) => {
+    state.publisherFilter = event.target.value;
     render();
   });
   daily?.addEventListener("input", (event) => {

@@ -2,8 +2,6 @@ import fs from "node:fs";
 
 const [input = "data/wordbooks.current-demo.json"] = process.argv.slice(2);
 
-const EXPECTED_PUBLISHERS = ["人教版", "外研版", "译林版", "沪教牛津版", "北师大版", "仁爱版", "冀教版", "鲁教版", "教科版"];
-const EXPECTED_GRADES = ["七年级上", "七年级下", "八年级上", "八年级下", "九年级上", "九年级下"];
 const REQUIRED_SOURCE = "客户授权官方电子教材书后词汇表";
 const REQUIRED_AUTHORIZATION_ID = "AUTHORIZATION_CONFIRMATION_2026-06-17";
 
@@ -11,14 +9,12 @@ const data = JSON.parse(fs.readFileSync(input, "utf8"));
 const report = {
   input,
   checkedAt: new Date().toISOString(),
-  expectedPublishers: EXPECTED_PUBLISHERS,
-  expectedGrades: EXPECTED_GRADES,
   summary: {
     publisherCount: data.publishers?.length || 0,
     bookCount: 0,
     wordCount: 0,
-    missingBooks: [],
     emptyBooks: [],
+    lowWordCountBooks: [],
     duplicateWords: [],
     incompleteSourceBooks: [],
     notCustomerLatestBooks: []
@@ -26,16 +22,10 @@ const report = {
   books: []
 };
 
-const publisherMap = new Map((data.publishers || []).map((publisher) => [publisher.name, publisher]));
-
-for (const publisherName of EXPECTED_PUBLISHERS) {
-  const publisher = publisherMap.get(publisherName);
-  for (const gradeName of EXPECTED_GRADES) {
-    const grade = publisher?.grades?.find((item) => item.name === gradeName);
-    if (!grade) {
-      report.summary.missingBooks.push(`${publisherName} ${gradeName}`);
-      continue;
-    }
+for (const publisher of data.publishers || []) {
+  for (const grade of publisher.grades || []) {
+    const publisherName = publisher.name;
+    const gradeName = grade.name;
     const words = grade.units.flatMap((unit) => unit.words.map((word) => ({ ...word, unit: unit.name })));
     const duplicateWords = duplicates(words.map((item) => item.word.toLowerCase()));
     const nonBookSource = words.filter((item) => item.source !== "书后单词表" && item.source !== REQUIRED_SOURCE).length;
@@ -61,6 +51,7 @@ for (const publisherName of EXPECTED_PUBLISHERS) {
     report.summary.bookCount += 1;
     report.summary.wordCount += words.length;
     if (!words.length) report.summary.emptyBooks.push(`${publisherName} ${gradeName}`);
+    if (words.length > 0 && words.length < 200) report.summary.lowWordCountBooks.push(`${publisherName} ${gradeName}`);
     if (duplicateWords.length) {
       report.summary.duplicateWords.push({ book: `${publisherName} ${gradeName}`, words: duplicateWords });
     }

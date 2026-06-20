@@ -126,6 +126,34 @@ p {
   font-size: 12px;
 }
 
+.account-card {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.account-card strong {
+  color: var(--purple-dark);
+}
+
+.account-card span,
+.account-card small {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.account-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .side-actions {
   display: grid;
   gap: 10px;
@@ -347,10 +375,31 @@ p {
   background: #fbf8ff;
 }
 
+/* 已导入：卡片转为浅绿成功底色，与“待导入”的紫色待办态形成对比。 */
+.import-card.is-imported {
+  border-color: rgba(46, 170, 105, 0.35);
+  background: #f1faf4;
+}
+
 .import-card strong {
   display: block;
   color: var(--purple-dark);
   font-size: 18px;
+}
+
+.import-card.is-imported strong {
+  color: var(--green);
+}
+
+/* 导入成功后的“重新导入”按钮：浅色可点样式，区别于未导入时的深色实心主按钮。 */
+.import-done-btn {
+  border: 1px solid rgba(46, 170, 105, 0.4);
+  color: var(--green);
+  background: #eafaf1;
+}
+
+.import-done-btn:hover {
+  background: #ddf5e7;
 }
 
 .import-card p {
@@ -426,7 +475,8 @@ p {
 .primary-btn,
 .secondary-btn,
 .ghost-btn,
-.danger-btn {
+.danger-btn,
+.import-done-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -462,6 +512,98 @@ p {
   background: #fff4f5;
 }
 
+.auth-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 460px) minmax(240px, 1fr);
+  gap: 18px;
+  align-items: stretch;
+  min-height: calc(100vh - 64px);
+}
+
+.auth-card,
+.auth-side {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.auth-card {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+  padding: 28px;
+}
+
+.auth-card h1 {
+  font-size: 34px;
+  line-height: 1.12;
+}
+
+.auth-card p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.auth-alert {
+  padding: 10px 12px;
+  border: 1px solid rgba(229, 83, 97, 0.18);
+  border-radius: 8px;
+  color: #9f2431;
+  background: #fff4f5;
+  line-height: 1.45;
+}
+
+.auth-alert code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.auth-switch {
+  justify-self: start;
+}
+
+.auth-side {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-content: center;
+  padding: 28px;
+}
+
+.auth-metric {
+  min-height: 112px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.auth-metric strong {
+  display: block;
+  color: var(--purple-dark);
+  font-size: 34px;
+}
+
+.auth-metric span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;
@@ -471,6 +613,41 @@ p {
 .task-list {
   display: grid;
   gap: 14px;
+}
+
+.analytics-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.analytics-grid div {
+  min-height: 74px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.analytics-grid strong {
+  display: block;
+  color: var(--purple-dark);
+  font-size: 22px;
+}
+
+.analytics-grid span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .task-card {
@@ -963,6 +1140,10 @@ p {
     grid-template-columns: 1fr;
   }
 
+  .auth-shell {
+    grid-template-columns: 1fr;
+  }
+
   .brand-panel {
     position: static;
   }
@@ -1001,8 +1182,24 @@ p {
   .book-toolbar,
   .book-grid,
   .import-card,
-  .task-card {
+  .task-card,
+  .analytics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .auth-shell {
+    min-height: 100vh;
+    gap: 0;
+  }
+
+  .auth-card,
+  .auth-side {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .auth-side {
+    padding: 16px;
   }
 
   .setup-tabs {

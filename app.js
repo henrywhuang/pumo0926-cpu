@@ -91,10 +91,12 @@ let vocabulary = [
 ];
 
 const qwertyRows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+const API_BASE = "";
 
 const state = {
   screen: "tasks",
   setupTab: "book",
+  authMode: "login",
   systemFilter: "六三制",
   gradeFilter: "全部",
   publisherFilter: "全部",
@@ -106,7 +108,18 @@ const state = {
   status: "",
   statusType: "",
   choiceAnswered: false,
-  progress: loadProgress()
+  progress: loadProgress(),
+  auth: {
+    token: localStorage.getItem("superWordToken") || "",
+    user: null,
+    analytics: null,
+    adminAnalytics: null,
+    error: "",
+    busy: false,
+    ready: false,
+    backendOnline: true,
+    lastSyncAt: ""
+  }
 };
 
 // 版本+册次 → 官方教材封面缩略图 URL，异步从教材清单加载后填充。
@@ -117,6 +130,7 @@ if (state.progress.plan?.bookId) state.selectedBookId = state.progress.plan.book
 if (new URLSearchParams(window.location.search).get("demo") === "1") seedDemoProgress();
 loadRealWordbook();
 loadCoverMap();
+initAuth();
 
 function w(word, cn, part, grade, unit, uk, us, chunks, phonics, example, exampleCn) {
   return {
@@ -160,6 +174,74 @@ async function loadCoverMap() {
   } catch {
     // 封面缺失时卡片回退到文字占位封面。
   }
+}
+
+async function initAuth() {
+  if (!state.auth.token) {
+    state.auth.ready = true;
+    render();
+    return;
+  }
+  try {
+    const data = await apiRequest("/api/auth/me");
+    state.auth.user = data.user;
+    await loadRemoteProgress();
+    await refreshAnalytics();
+  } catch {
+    localStorage.removeItem("superWordToken");
+    state.auth.token = "";
+    state.auth.user = null;
+  } finally {
+    state.auth.ready = true;
+    render();
+  }
+}
+
+async function apiRequest(path, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {})
+  };
+  if (state.auth.token) headers.Authorization = `Bearer ${state.auth.token}`;
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      body: options.body && typeof options.body !== "string" ? JSON.stringify(options.body) : options.body
+    });
+  } catch {
+    state.auth.backendOnline = false;
+    throw new Error("后端服务未连接，请使用 node server.js 启动 H5 后端。");
+  }
+  state.auth.backendOnline = true;
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || "请求失败");
+  return data;
+}
+
+async function loadRemoteProgress() {
+  const data = await apiRequest("/api/progress");
+  const remote = data.progress?.value;
+  const remoteRecordCount = Object.keys(remote?.records || {}).length;
+  const localRecordCount = Object.keys(state.progress.records || {}).length;
+  const shouldUseRemote = remote?.plan && (!state.progress.plan || remoteRecordCount >= localRecordCount);
+  if (shouldUseRemote) {
+    state.progress = normalizeProgress(remote);
+    localStorage.setItem("superWordV2", JSON.stringify(state.progress));
+  } else {
+    await syncProgress("login_sync");
+  }
+}
+
+async function refreshAnalytics() {
+  if (!state.auth.user) return;
+  const [mine, admin] = await Promise.allSettled([
+    apiRequest("/api/analytics/me"),
+    apiRequest("/api/admin/analytics")
+  ]);
+  if (mine.status === "fulfilled") state.auth.analytics = mine.value.analytics;
+  if (admin.status === "fulfilled") state.auth.adminAnalytics = admin.value.analytics;
 }
 
 function coverFor(book) {
@@ -236,6 +318,7 @@ function normalizeProgress(progress) {
 function saveProgress() {
   state.progress = normalizeProgress(state.progress);
   localStorage.setItem("superWordV2", JSON.stringify(state.progress));
+  scheduleProgressSync("progress_saved");
 }
 
 function seedDemoProgress() {
@@ -337,6 +420,14 @@ function planSteps() {
 
 function render() {
   state.progress = normalizeProgress(state.progress);
+  if (!state.auth.ready) {
+    app.innerHTML = `<section class="auth-shell"><div class="auth-card"><strong>正在连接用户服务...</strong></div></section>`;
+    return;
+  }
+  if (!state.auth.user) {
+    renderAuth();
+    return;
+  }
   if (!currentPlan()) {
     state.screen = "setup";
   }
@@ -353,6 +444,35 @@ function render() {
   bindDynamicInputs();
 }
 
+function renderAuth() {
+  const isRegister = state.authMode === "register";
+  app.innerHTML = `
+    <section class="auth-shell">
+      <div class="auth-card">
+        <div class="eyebrow">H5 User Center</div>
+        <h1>初中词汇<br />超级单词表</h1>
+        <p>注册登录后使用学习计划、七步学练和复习任务，系统会保留学习记录并生成活跃度数据。</p>
+        ${state.auth.backendOnline ? "" : `<div class="auth-alert">后端服务未连接，请使用 <code>node server.js</code> 启动后再登录。</div>`}
+        ${state.auth.error ? `<div class="auth-alert">${escapeHtml(state.auth.error)}</div>` : ""}
+        <form class="auth-form" data-auth-form="${isRegister ? "register" : "login"}">
+          ${isRegister ? `<label>昵称<input class="input" name="name" autocomplete="name" placeholder="学生昵称" required /></label>` : ""}
+          <label>邮箱<input class="input" name="email" type="email" autocomplete="email" placeholder="student@example.com" required /></label>
+          <label>密码<input class="input" name="password" type="password" autocomplete="${isRegister ? "new-password" : "current-password"}" placeholder="至少 6 位" required /></label>
+          <button class="primary-btn" type="submit" ${state.auth.busy ? "disabled" : ""}>${isRegister ? "注册并登录" : "登录"}</button>
+        </form>
+        <button class="ghost-btn auth-switch" data-action="${isRegister ? "showLogin" : "showRegister"}" type="button">
+          ${isRegister ? "已有账号，去登录" : "没有账号，先注册"}
+        </button>
+      </div>
+      <div class="auth-side">
+        <div class="auth-metric"><strong>47</strong><span>官方教材册次</span></div>
+        <div class="auth-metric"><strong>17,173</strong><span>校验后词条</span></div>
+        <div class="auth-metric"><strong>1/2/4/7/15/30</strong><span>复习间隔</span></div>
+      </div>
+    </section>
+  `;
+}
+
 function renderBrandPanel() {
   const total = selectedWords().length;
   const learned = selectedWords().filter((word) => state.progress.records[word.id]?.learned).length;
@@ -366,6 +486,15 @@ function renderBrandPanel() {
         <div class="stat"><strong>${total}</strong><span>本书词汇</span></div>
         <div class="stat"><strong>${learned}</strong><span>已学</span></div>
         <div class="stat"><strong>${due}</strong><span>待复习</span></div>
+      </div>
+      <div class="account-card">
+        <strong>${escapeHtml(state.auth.user?.name || "已登录")}</strong>
+        <span>${escapeHtml(state.auth.user?.email || "")}</span>
+        <small>${state.auth.lastSyncAt ? `最近同步 ${state.auth.lastSyncAt}` : "学习记录将自动同步"}</small>
+        <div class="account-actions">
+          <button class="secondary-btn" data-action="syncNow" type="button">同步</button>
+          <button class="ghost-btn" data-action="logout" type="button">退出</button>
+        </div>
       </div>
       <div class="side-actions">
         <button class="secondary-btn" data-action="showSetup" type="button">选择单词书</button>
@@ -413,12 +542,12 @@ function renderSetup() {
         </select>
       </div>
 
-      <div class="import-card">
+      <div class="import-card ${imported ? "is-imported" : ""}">
         <div>
-          <strong>${imported ? "词表已导入" : "导入本书词表"}</strong>
+          <strong>${imported ? "✓ 词表已导入" : "导入本书词表"}</strong>
           <p>${selected.title} · 可导入 ${selectedCount} 个核心词 · ${imported ? `导入时间 ${imported.importedAt}` : "导入后才能生成学习计划"}</p>
         </div>
-        <button class="${imported ? "secondary-btn" : "primary-btn"}" data-action="importBook" type="button">
+        <button class="${imported ? "import-done-btn" : "primary-btn"}" data-action="importBook" type="button">
           ${imported ? "重新导入" : "导入"}
         </button>
       </div>
@@ -510,11 +639,37 @@ function renderTasks() {
           ${renderTaskCard("solid", "▥", `任务二：巩固复习 (${tasks.solid.length}词)`, reviewText(tasks.solid, "2/4 天"), ["translate", "split", "spell"], tasks.solid.length ? "可学习" : "待解锁", !tasks.solid.length)}
           ${renderTaskCard("quick", "▦", `任务三：速刷复习 (${tasks.quick.length}词)`, reviewText(tasks.quick, "1 天"), ["translate"], tasks.quick.length ? "可学习" : "待解锁", !tasks.quick.length)}
         </div>
+        ${renderAnalyticsPanel()}
         <div class="button-row" style="margin-top:18px">
           <button class="primary-btn" data-action="startTask" data-task="new" type="button" ${tasks.newWords.length ? "" : "disabled"}>开始学习</button>
           <button class="secondary-btn" data-action="showWordList" type="button">单词列表</button>
         </div>
         <div id="wordListMount"></div>
+      </div>
+    </section>
+  `;
+}
+
+function renderAnalyticsPanel() {
+  const mine = state.auth.analytics || {};
+  const admin = state.auth.adminAnalytics || {};
+  const latest = admin.dailyActive?.at(-1);
+  return `
+    <section class="analytics-panel">
+      <div class="section-head">
+        <div>
+          <h2>数据留存观测</h2>
+          <p>记录登录、选书、计划、学习完成和复习行为。</p>
+        </div>
+        <button class="secondary-btn" data-action="refreshAnalytics" type="button">刷新</button>
+      </div>
+      <div class="analytics-grid">
+        <div><strong>${mine.activeDays || 0}</strong><span>我的活跃天数</span></div>
+        <div><strong>${mine.learnedWords || 0}</strong><span>新学完成</span></div>
+        <div><strong>${mine.reviewedWords || 0}</strong><span>复习完成</span></div>
+        <div><strong>${admin.totalUsers || 0}</strong><span>注册用户</span></div>
+        <div><strong>${admin.activeUsersToday || 0}</strong><span>今日活跃</span></div>
+        <div><strong>${latest?.events || 0}</strong><span>今日事件</span></div>
       </div>
     </section>
   `;
@@ -622,6 +777,12 @@ function startTask(type) {
     wordIndex: 0,
     stepIndex: 0
   };
+  trackEvent("task_started", {
+    taskType: type,
+    bookId: currentPlan()?.bookId || "",
+    wordCount: wordsForTask.length,
+    steps
+  });
   resetExerciseState();
   state.screen = "study";
   render();
@@ -907,6 +1068,13 @@ app.addEventListener("click", (event) => {
   handleAction(actionButton);
 });
 
+app.addEventListener("submit", (event) => {
+  const form = event.target.closest("[data-auth-form]");
+  if (!form) return;
+  event.preventDefault();
+  submitAuthForm(form);
+});
+
 function handleAction(button) {
   const action = button.dataset.action;
   if (action === "showSetup") {
@@ -919,6 +1087,19 @@ function handleAction(button) {
     state.session = null;
     render();
   }
+  if (action === "showRegister") {
+    state.authMode = "register";
+    state.auth.error = "";
+    render();
+  }
+  if (action === "showLogin") {
+    state.authMode = "login";
+    state.auth.error = "";
+    render();
+  }
+  if (action === "logout") logout();
+  if (action === "syncNow") syncProgress("manual_sync").then(() => refreshAnalytics()).then(() => render());
+  if (action === "refreshAnalytics") refreshAnalytics().then(() => render());
   if (action === "savePlan") savePlan();
   if (action === "importBook") importBook();
   if (action === "selectAllSteps") {
@@ -967,6 +1148,82 @@ function handleAction(button) {
   }
 }
 
+async function submitAuthForm(form) {
+  const mode = form.dataset.authForm;
+  const formData = new FormData(form);
+  state.auth.busy = true;
+  state.auth.error = "";
+  render();
+  try {
+    const data = await apiRequest(mode === "register" ? "/api/auth/register" : "/api/auth/login", {
+      method: "POST",
+      body: {
+        name: formData.get("name"),
+        email: formData.get("email"),
+        password: formData.get("password")
+      }
+    });
+    state.auth.token = data.token;
+    state.auth.user = data.user;
+    localStorage.setItem("superWordToken", data.token);
+    await loadRemoteProgress();
+    await refreshAnalytics();
+    trackEvent(mode === "register" ? "register_success" : "login_success", {});
+  } catch (error) {
+    state.auth.error = error.message;
+  } finally {
+    state.auth.busy = false;
+    render();
+  }
+}
+
+async function logout() {
+  try {
+    await apiRequest("/api/auth/logout", { method: "POST", body: {} });
+  } catch {
+    // Local logout still proceeds when the server is unreachable.
+  }
+  localStorage.removeItem("superWordToken");
+  state.auth.token = "";
+  state.auth.user = null;
+  state.auth.analytics = null;
+  state.auth.adminAnalytics = null;
+  state.auth.error = "";
+  state.screen = "setup";
+  render();
+}
+
+async function syncProgress(reason = "auto_sync") {
+  if (!state.auth.user || !state.auth.token) return;
+  try {
+    const data = await apiRequest("/api/progress", {
+      method: "POST",
+      body: { progress: state.progress, reason }
+    });
+    state.auth.lastSyncAt = (data.updatedAt || "").slice(11, 19);
+  } catch (error) {
+    state.auth.error = error.message;
+  }
+}
+
+function scheduleProgressSync(reason) {
+  if (!state.auth.user) return;
+  window.clearTimeout(scheduleProgressSync.timer);
+  scheduleProgressSync.timer = window.setTimeout(() => {
+    syncProgress(reason).then(() => refreshAnalytics()).then(() => {
+      if (state.screen === "tasks") render();
+    });
+  }, 350);
+}
+
+function trackEvent(type, payload = {}) {
+  if (!state.auth.user || !state.auth.token) return;
+  apiRequest("/api/events", {
+    method: "POST",
+    body: { type, payload }
+  }).then(() => refreshAnalytics()).catch(() => {});
+}
+
 function ensureDraftPlan() {
   if (!state.progress.plan) {
     state.progress.plan = {
@@ -998,6 +1255,11 @@ function savePlan() {
   state.progress.plan.dailyCount = Number(dailyInput?.value || state.progress.plan.dailyCount || 4);
   state.progress.plan.createdAt = state.progress.plan.createdAt || todayKey();
   saveProgress();
+  trackEvent("plan_saved", {
+    bookId: state.progress.plan.bookId,
+    dailyCount: state.progress.plan.dailyCount,
+    steps: state.progress.plan.steps
+  });
   state.screen = "tasks";
   render();
 }
@@ -1009,6 +1271,12 @@ function importBook() {
     count: wordsForBook(book).length
   };
   saveProgress();
+  trackEvent("book_imported", {
+    bookId: state.selectedBookId,
+    publisher: book.publisher,
+    grade: book.grade,
+    count: wordsForBook(book).length
+  });
   render();
 }
 
@@ -1133,6 +1401,14 @@ function completeCurrentWord() {
   state.progress.records[word.id] = record;
   if (state.session.type === "new") state.progress.completedToday += 1;
   saveProgress();
+  trackEvent("word_completed", {
+    taskType: state.session.type,
+    bookId: currentPlan()?.bookId || "",
+    wordId: word.id,
+    word: word.word,
+    unit: word.unit,
+    reviewCount: record.reviewCount
+  });
 }
 
 function chooseTranslation(button) {

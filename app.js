@@ -511,7 +511,8 @@ function flattenWordbook(data) {
             part: item.part,
             uk: item.phonetic?.uk || "",
             us: item.phonetic?.us || item.phonetic?.uk || "",
-            chunks: item.chunks?.length ? item.chunks : splitWordIntoChunks(item.word),
+            // 始终按音节节奏重算词块（数据自带的旧词块拆分有误，弃用）。
+            chunks: splitWordIntoChunks(item.word),
             phonics: item.phonics || [],
             example: item.example || "",
             exampleCn: item.exampleCn || ""
@@ -523,10 +524,64 @@ function flattenWordbook(data) {
   return result;
 }
 
+// 按英语音节节奏拆分单词（用于拆分发音/词块拼读）。
+// 处理：元音核、双辅音切中间、二合/连缀辅音不拆、辅音+le 成节、不发音的结尾 e、中间 s+爆破音断开。
 function splitWordIntoChunks(text) {
-  if (!/^[a-zA-Z][a-zA-Z'-]*$/.test(text)) return [text];
-  const chunks = text.match(/[bcdfghjklmnpqrstvwxyz]*[aeiouy]+[bcdfghjklmnpqrstvwxyz]*/gi);
-  return chunks?.length ? chunks : [text];
+  text = (text || "").trim();
+  if (!/^[a-zA-Z]+$/.test(text) || text.length <= 3) return [text];
+  const lower = text.toLowerCase();
+  const last = lower.length - 1;
+  const isV = (c) => "aeiouy".includes(c);
+  // 不发音的结尾 e：以 e 结尾、非「辅音+le」的成节 e、且 e 前为辅音（如 name/whale 不拆出 e）。
+  const silentE = lower[last] === "e"
+    && !/[bcdfghjkmnpqrstvwxz]le$/.test(lower)
+    && !isV(lower[last - 1]);
+  const isVowel = (i) => {
+    if (i === last && silentE) return false;
+    const c = lower[i];
+    return "aeiouy".includes(c) && !(c === "y" && i === 0);
+  };
+  const nuclei = [];
+  for (let i = 0; i < lower.length; ) {
+    if (isVowel(i)) {
+      let j = i;
+      while (j + 1 < lower.length && isVowel(j + 1)) j++;
+      nuclei.push([i, j]);
+      i = j + 1;
+    } else i++;
+  }
+  if (nuclei.length <= 1) return [text];
+  const DIGRAPHS = new Set(["ch", "ph", "sh", "th", "wh", "gh", "ck", "ng", "qu"]);
+  const BLENDS = new Set(["bl", "br", "cl", "cr", "dr", "fl", "fr", "gl", "gr", "pl", "pr", "sc", "sk", "sl", "sm", "sn", "sp", "st", "sw", "tr", "tw", "spr", "str", "scr", "spl", "thr", "shr", "squ"]);
+  const cuts = [];
+  for (let k = 0; k < nuclei.length - 1; k++) {
+    const start = nuclei[k][1] + 1;
+    const end = nuclei[k + 1][0];
+    const cons = lower.slice(start, end);
+    let cut;
+    const intoFinalLe = k === nuclei.length - 2 && /[bcdfghjkmnpqrstvwxz]le$/.test(lower) && cons.endsWith("l");
+    if (intoFinalLe) cut = end - 2; // 「辅音+le」自成最后一节（bot·tle、ta·ble、un·cle）
+    else if (cons.length === 0) cut = end;
+    else if (cons.length === 1) cut = start;
+    else if (cons.length === 2) {
+      if (["sp", "st", "sk", "sc"].includes(cons)) cut = start + 1; // 中间 s+爆破音：s 收前一音节
+      else cut = (DIGRAPHS.has(cons) || BLENDS.has(cons)) ? start : start + 1;
+    } else {
+      const l3 = cons.slice(-3);
+      const l2 = cons.slice(-2);
+      if (BLENDS.has(l3)) cut = end - 3;
+      else if (BLENDS.has(l2) || DIGRAPHS.has(l2)) cut = end - 2;
+      else cut = start + 2; // 三辅音无连缀：两辅音收前一音节（grand·pa、hand·writing）
+    }
+    cuts.push(cut);
+  }
+  const points = [0, ...cuts, text.length];
+  const parts = [];
+  for (let p = 0; p < points.length - 1; p++) {
+    const s = text.slice(points[p], points[p + 1]);
+    if (s) parts.push(s);
+  }
+  return parts.length ? parts : [text];
 }
 
 function loadProgress() {
@@ -1312,15 +1367,43 @@ function phoneticRow(word, withMic = false) {
 const CHUNK_COLORS = ["#2f6df0", "#e0564f", "#2aa86a", "#8a5cf0", "#e08a1e"];
 function phonicsChunks(word) {
   return `
-    <div class="phonics-chunks">
+    <div class="phonics-chunks" id="phonicsChunks">
       ${word.chunks.map((chunk, i) => `
-        <div class="phonics-chunk">
+        <button class="phonics-chunk" data-phonic="${i}" type="button">
           <span class="pc-letters" style="color:${CHUNK_COLORS[i % CHUNK_COLORS.length]}">${escapeHtml(chunk)}</span>
           ${word.phonics[i] ? `<span class="pc-ipa">${word.phonics[i]}</span>` : ""}
-        </div>
+        </button>
       `).join("")}
     </div>
-  `;
+    <div class="button-row" style="justify-content:center;margin-top:16px">
+      <button class="primary-btn" data-action="playPhonics" type="button">🔊 自然拼读</button>
+    </div>
+    <p class="hint-line" id="phonicsHint">点音块单独发音，或点「自然拼读」依次拼读并合成整词。</p>`;
+}
+
+// 自然拼读：逐个音块发音并高亮，最后合成整词。
+function playPhonicsBlend(word) {
+  const chunks = word.chunks?.length ? word.chunks : [word.word];
+  const gap = 820;
+  setStatus(`自然拼读：${chunks.join(" - ")} → ${word.word}`, "success");
+  chunks.forEach((chunk, i) => {
+    setTimeout(() => {
+      speak(chunk, 0.7);
+      highlightPhonicsChunk(i);
+    }, i * gap);
+  });
+  setTimeout(() => {
+    speak(word.word, 0.92);
+    highlightPhonicsChunk(-1);
+    const hint = document.querySelector("#phonicsHint");
+    if (hint) hint.textContent = `拼读完成：${chunks.join(" - ")} → ${word.word}`;
+  }, chunks.length * gap + 260);
+}
+
+function highlightPhonicsChunk(index) {
+  document.querySelectorAll("#phonicsChunks .phonics-chunk").forEach((el, i) => {
+    el.classList.toggle("playing", i === index);
+  });
 }
 
 function renderWordDisplay(word) {
@@ -1630,8 +1713,16 @@ app.addEventListener("click", (event) => {
   const accentButton = event.target.closest("[data-accent]");
   const choiceButton = event.target.closest("[data-choice]");
   const chunkButton = event.target.closest("[data-chunk]");
+  const phonicButton = event.target.closest("[data-phonic]");
   const keyButton = event.target.closest("[data-key]");
 
+  if (phonicButton) {
+    const word = currentWord();
+    const i = Number(phonicButton.dataset.phonic);
+    speak(word.chunks[i] || word.word, 0.72);
+    highlightPhonicsChunk(i);
+    return;
+  }
   if (tabButton) {
     state.setupTab = tabButton.dataset.tab;
     render();
@@ -1742,6 +1833,7 @@ function handleAction(button) {
     render();
   }
   if (action === "playChunks") playChunks(currentWord());
+  if (action === "playPhonics") playPhonicsBlend(currentWord());
   if (action === "record") startRecognition();
   if (action === "markRead") setStatus("跟读完成，继续下一步。", "success");
   if (action === "prevStep") prevStep();

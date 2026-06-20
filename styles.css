@@ -1447,8 +1447,18 @@ p {
   gap: 4px;
   min-width: 64px;
   padding: 10px 14px;
+  border: 1px solid transparent;
   border-radius: 10px;
   background: #f3f0fb;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.phonics-chunk.playing {
+  background: var(--purple-soft);
+  border-color: var(--purple);
+  transform: translateY(-3px) scale(1.06);
+  box-shadow: 0 8px 16px rgba(109, 83, 191, 0.28);
 }
 
 .pc-letters {

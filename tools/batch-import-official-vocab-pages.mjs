@@ -121,16 +121,23 @@ function selectVocabularyPages(pages) {
 function isVocabularyStartPage(page) {
   const text = page.lines.map((line) => line.text).join(" ");
   const normalized = cleanText(text);
-  if (/Vocabulary practice|Building your vocabulary|vocabulary notebook|words and expressions from/i.test(normalized)) return false;
-  if (/Vocabulary in Each Unit|Word List|Wordlist|单词表|词汇表/i.test(normalized)) return true;
-  if (/Words and expressions(?!\s+from\b)/i.test(normalized) && /Unit\s*[1-9S]|Module\s*[1-9]|Lesson\s*[1-9]/i.test(normalized)) return true;
-  if (/\bVocabulary\s*[（(]?\s*(?:I|II|1|2|Ⅰ|Ⅱ)\s*[）)]?/i.test(normalized)) return true;
+  const head = normalized.slice(0, 420);
+  if (/Vocabulary practice|Vocabulary in Use|Building your vocabulary|vocabulary notebook|words and expressions from/i.test(normalized)) return false;
+  if (/Vocabulary A-Z|Vocabulary Index|Vocabulary from Primary School|Wordlist\s*[（(]?\s*in alphabetical order|Proper nouns|Names of (?:People|Places)|Irregular Verbs|Pronunciation guide/i.test(head)) return false;
+  if (/Vocabulary in Each Unit|Vocabulary\s*in units|Words in Each Unit|Words and Expressions in Each Unit|Words and expressions in each unit|Wordlist\s*[（(]?\s*by unit|Word List|单词表|词汇表/i.test(head)) return true;
+  if (/(^|出版社\s+)Words and expressions(?!\s+from\b)/i.test(head) && /Unit\s*[1-9S]|Module\s*[1-9]|Lesson\s*[1-9]/i.test(normalized)) return true;
+  if (/\bVocabulary\s*(?:[（(]\s*(?:I|1|Ⅰ)\s*[）)]|I\b|Ⅰ\b)/i.test(head)) return true;
   return false;
 }
 
 function isVocabularyStopPage(page) {
   const text = page.lines.map((line) => line.text).join(" ");
-  return /Irregular Verbs|Tapescripts|Pronunciation guide/i.test(text);
+  const normalized = cleanText(text);
+  const head = normalized.slice(0, 420);
+  if (/Vocabulary A-Z|Vocabulary Index|Vocabulary from Primary School|Wordlist\s*[（(]?\s*in alphabetical order|Proper nouns|Names of (?:People|Places)|Irregular Verbs|Tapescripts|Pronunciation guide/i.test(head)) return true;
+  if (/\b(?:Vocabulary|Vocalbulary)\s*(?:[（(]\s*(?:II|2|Ⅱ)\s*[）)]|II\b|Ⅱ\b)/i.test(head)) return true;
+  if (/\bVocabulary\b/i.test(normalized) && !/Vocabulary in Each Unit|Unit\s*[1-9S]|Module\s*[1-9]|Lesson\s*[1-9]/i.test(normalized)) return true;
+  return false;
 }
 
 function parseBook(book, pages) {

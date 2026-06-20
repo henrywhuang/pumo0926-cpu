@@ -94,6 +94,7 @@ const qwertyRows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 
 const state = {
   screen: "tasks",
+  setupTab: "book",
   systemFilter: "六三制",
   gradeFilter: "全部",
   publisherFilter: "全部",
@@ -108,10 +109,14 @@ const state = {
   progress: loadProgress()
 };
 
+// 版本+册次 → 官方教材封面缩略图 URL，异步从教材清单加载后填充。
+let coverMap = {};
+
 const app = document.querySelector("#app");
 if (state.progress.plan?.bookId) state.selectedBookId = state.progress.plan.bookId;
 if (new URLSearchParams(window.location.search).get("demo") === "1") seedDemoProgress();
 loadRealWordbook();
+loadCoverMap();
 
 function w(word, cn, part, grade, unit, uk, us, chunks, phonics, example, exampleCn) {
   return {
@@ -142,6 +147,37 @@ async function loadRealWordbook() {
   } catch {
     // Static demo still works when the real wordbook file is unavailable.
   }
+}
+
+// 加载官方教材清单，构建「版本-册次 → 封面图」映射，供单词书卡片展示书封面。
+async function loadCoverMap() {
+  try {
+    const response = await fetch("data/official-smartedu-junior-english-teachingmaterials.json", { cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json();
+    const volume = { "上册": "上", "下册": "下", "全一册": "全一册" };
+    const map = {};
+    for (const item of data.items || []) {
+      if (!item.thumbnail) continue;
+      const publisher = normalizePublisher(item.publisher);
+      const grade = `${item.grade}${volume[item.volume] ?? (item.volume || "")}`;
+      map[`${publisher}-${grade}`] = item.thumbnail;
+    }
+    coverMap = map;
+    render();
+  } catch {
+    // 封面缺失时卡片回退到文字占位封面。
+  }
+}
+
+// 教材清单里的版本名与应用内版本名做对齐。
+function normalizePublisher(name) {
+  const alias = { "外研社版": "外研版" };
+  return alias[name] || name;
+}
+
+function coverFor(book) {
+  return coverMap[`${book.publisher}-${book.grade}`] || "";
 }
 
 function flattenWordbook(data) {
@@ -301,6 +337,14 @@ function wordsForBook(book) {
   return vocabulary.filter((item) => !item.publisher && item.grade === book.grade);
 }
 
+// 仅返回词库中实际存在词条的版本，按主版本列表顺序排列。
+// 真实词表异步加载完成前回退到完整版本列表，避免下拉为空。
+function availablePublishers() {
+  const present = new Set(vocabulary.filter((item) => item.publisher).map((item) => item.publisher));
+  const inLibrary = publishers.filter((publisher) => present.has(publisher));
+  return inLibrary.length ? inLibrary : publishers;
+}
+
 function planSteps() {
   return currentPlan()?.steps?.length ? currentPlan().steps : STEP_DEFS.map((step) => step.id);
 }
@@ -347,11 +391,13 @@ function renderBrandPanel() {
 }
 
 function renderSetup() {
+  const libraryPublishers = new Set(availablePublishers());
   const filteredBooks = books.filter((book) => {
     const matchSystem = book.system === state.systemFilter;
     const matchGrade = state.gradeFilter === "全部" || book.grade === state.gradeFilter;
+    const inLibrary = libraryPublishers.has(book.publisher);
     const matchPublisher = state.publisherFilter === "全部" || book.publisher === state.publisherFilter;
-    return matchSystem && matchGrade && matchPublisher;
+    return matchSystem && matchGrade && inLibrary && matchPublisher;
   });
   const plan = currentPlan() || {
     bookId: state.selectedBookId,
@@ -361,12 +407,12 @@ function renderSetup() {
   const selected = books.find((book) => book.id === state.selectedBookId) || books[0];
   const selectedCount = wordsForBook(selected).length;
   const imported = state.progress.importedBooks[state.selectedBookId];
-  return `
-    <section class="desk-panel">
+  const activeTab = state.setupTab === "plan" ? "plan" : "book";
+  const bookPanel = `
       <div class="section-head">
         <div>
           <h2>选择单词书</h2>
-          <p>先选学制，再选教材版本和册次，最后设置每天新学几个单词。</p>
+          <p>先选学制，再选教材版本和册次。</p>
         </div>
       </div>
       <div class="book-toolbar">
@@ -377,17 +423,8 @@ function renderSetup() {
           ${["全部", ...gradeSystems[state.systemFilter]].map((grade) => `<option value="${grade}" ${state.gradeFilter === grade ? "selected" : ""}>${grade}</option>`).join("")}
         </select>
         <select class="select" id="publisherFilter" aria-label="选择教材版本">
-          ${["全部", ...publishers].map((publisher) => `<option value="${publisher}" ${state.publisherFilter === publisher ? "selected" : ""}>${publisher === "全部" ? "全部版本" : publisher}</option>`).join("")}
+          ${["全部", ...availablePublishers()].map((publisher) => `<option value="${publisher}" ${state.publisherFilter === publisher ? "selected" : ""}>${publisher === "全部" ? "全部版本" : publisher}</option>`).join("")}
         </select>
-      </div>
-      <div class="book-grid">
-        ${filteredBooks.map((book) => `
-          <button class="book-card ${state.selectedBookId === book.id ? "active" : ""}" data-book="${book.id}" type="button">
-            <strong>${book.title}</strong>
-            <span>${book.subtitle} · ${book.units} 个单元</span>
-            <span>英式 IPA + 美式 IPA · 七步学练</span>
-          </button>
-        `).join("")}
       </div>
 
       <div class="import-card">
@@ -400,8 +437,25 @@ function renderSetup() {
         </button>
       </div>
 
-      <hr class="divider" />
-
+      <div class="book-grid">
+        ${filteredBooks.map((book) => {
+          const cover = coverFor(book);
+          return `
+          <button class="book-card ${state.selectedBookId === book.id ? "active" : ""}" data-book="${book.id}" type="button">
+            <div class="book-cover">
+              ${cover ? `<img src="${cover}" alt="${escapeHtml(book.title)} 封面" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />` : ""}
+              <span class="cover-fallback">${book.publisher}<br />${book.grade}</span>
+            </div>
+            <div class="book-card-body">
+              <strong>${book.title}</strong>
+              <span>${book.subtitle} · ${book.units} 个单元</span>
+              <span>英式 IPA + 美式 IPA · 七步学练</span>
+            </div>
+          </button>
+        `;
+        }).join("")}
+      </div>`;
+  const planPanel = `
       <div class="plan-card">
         <div class="section-head">
           <div>
@@ -409,6 +463,7 @@ function renderSetup() {
             <p>设置每日新学数量，复习由艾宾浩斯曲线自动推荐。</p>
           </div>
         </div>
+        ${imported ? "" : `<p class="plan-hint">请先在「选择单词书」中导入词表，导入后才能保存计划。</p>`}
         <div class="range-row">
           <input id="dailyCount" type="range" min="2" max="20" step="1" value="${plan.dailyCount}" />
           <div class="daily-number" id="dailyCountText">${plan.dailyCount}</div>
@@ -430,7 +485,14 @@ function renderSetup() {
           <button class="primary-btn" data-action="savePlan" type="button" ${imported ? "" : "disabled"}>保存计划并生成今日任务</button>
           <button class="secondary-btn" data-action="selectAllSteps" type="button">七步全选</button>
         </div>
+      </div>`;
+  return `
+    <section class="desk-panel">
+      <div class="setup-tabs">
+        <button class="setup-tab ${activeTab === "book" ? "active" : ""}" data-tab="book" type="button">选择单词书</button>
+        <button class="setup-tab ${activeTab === "plan" ? "active" : ""}" data-tab="plan" type="button">学习计划</button>
       </div>
+      ${activeTab === "book" ? bookPanel : planPanel}
     </section>
   `;
 }
@@ -814,6 +876,7 @@ function bindDynamicInputs() {
 }
 
 app.addEventListener("click", (event) => {
+  const tabButton = event.target.closest("[data-tab]");
   const bookButton = event.target.closest("[data-book]");
   const stepToggle = event.target.closest("[data-step-toggle]");
   const actionButton = event.target.closest("[data-action]");
@@ -822,6 +885,11 @@ app.addEventListener("click", (event) => {
   const chunkButton = event.target.closest("[data-chunk]");
   const keyButton = event.target.closest("[data-key]");
 
+  if (tabButton) {
+    state.setupTab = tabButton.dataset.tab;
+    render();
+    return;
+  }
   if (bookButton) {
     state.selectedBookId = bookButton.dataset.book;
     render();

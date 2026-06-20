@@ -1,0 +1,456 @@
+{
+  "checkedAt": "2026-06-20T07:34:52.485Z",
+  "summary": {
+    "books": 47,
+    "totalWords": 17173,
+    "maxCount": 684,
+    "minCount": 123,
+    "over800": [],
+    "under180": [
+      {
+        "publisher": "外研版",
+        "grade": "九年级下",
+        "count": 123,
+        "units": 8,
+        "long": 1,
+        "noCn": 0,
+        "dup": 1
+      },
+      {
+        "publisher": "译林版",
+        "grade": "九年级下",
+        "count": 123,
+        "units": 5,
+        "long": 3,
+        "noCn": 0,
+        "dup": 4
+      }
+    ],
+    "noVocabBooks": []
+  },
+  "rows": [
+    {
+      "publisher": "人教版",
+      "grade": "九年级全一册",
+      "count": 684,
+      "units": 9,
+      "long": 22,
+      "noCn": 14,
+      "dup": 0
+    },
+    {
+      "publisher": "沪教版",
+      "grade": "七年级上",
+      "count": 601,
+      "units": 9,
+      "long": 14,
+      "noCn": 6,
+      "dup": 267
+    },
+    {
+      "publisher": "人教版",
+      "grade": "八年级下",
+      "count": 601,
+      "units": 8,
+      "long": 19,
+      "noCn": 32,
+      "dup": 1
+    },
+    {
+      "publisher": "人教版",
+      "grade": "八年级上",
+      "count": 544,
+      "units": 8,
+      "long": 22,
+      "noCn": 42,
+      "dup": 1
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "九年级全一册",
+      "count": 538,
+      "units": 18,
+      "long": 18,
+      "noCn": 10,
+      "dup": 230
+    },
+    {
+      "publisher": "沪教版",
+      "grade": "七年级下",
+      "count": 537,
+      "units": 9,
+      "long": 9,
+      "noCn": 10,
+      "dup": 238
+    },
+    {
+      "publisher": "科普版",
+      "grade": "九年级上",
+      "count": 536,
+      "units": 4,
+      "long": 17,
+      "noCn": 17,
+      "dup": 1
+    },
+    {
+      "publisher": "科普版",
+      "grade": "八年级上",
+      "count": 529,
+      "units": 6,
+      "long": 17,
+      "noCn": 26,
+      "dup": 10
+    },
+    {
+      "publisher": "沪教版",
+      "grade": "八年级上",
+      "count": 478,
+      "units": 9,
+      "long": 11,
+      "noCn": 2,
+      "dup": 216
+    },
+    {
+      "publisher": "人教版",
+      "grade": "七年级下",
+      "count": 457,
+      "units": 8,
+      "long": 3,
+      "noCn": 7,
+      "dup": 0
+    },
+    {
+      "publisher": "冀教版",
+      "grade": "九年级全一册",
+      "count": 446,
+      "units": 9,
+      "long": 0,
+      "noCn": 41,
+      "dup": 0
+    },
+    {
+      "publisher": "沪教版",
+      "grade": "八年级下",
+      "count": 440,
+      "units": 9,
+      "long": 17,
+      "noCn": 13,
+      "dup": 187
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级下",
+      "count": 423,
+      "units": 9,
+      "long": 3,
+      "noCn": 15,
+      "dup": 6
+    },
+    {
+      "publisher": "沪教版",
+      "grade": "九年级上",
+      "count": 420,
+      "units": 8,
+      "long": 11,
+      "noCn": 0,
+      "dup": 189
+    },
+    {
+      "publisher": "冀教版",
+      "grade": "八年级下",
+      "count": 412,
+      "units": 8,
+      "long": 0,
+      "noCn": 4,
+      "dup": 0
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "八年级上",
+      "count": 404,
+      "units": 9,
+      "long": 3,
+      "noCn": 13,
+      "dup": 6
+    },
+    {
+      "publisher": "科普版",
+      "grade": "八年级下",
+      "count": 400,
+      "units": 3,
+      "long": 10,
+      "noCn": 16,
+      "dup": 4
+    },
+    {
+      "publisher": "冀教版",
+      "grade": "八年级上",
+      "count": 399,
+      "units": 8,
+      "long": 0,
+      "noCn": 7,
+      "dup": 0
+    },
+    {
+      "publisher": "译林版",
+      "grade": "七年级上",
+      "count": 389,
+      "units": 8,
+      "long": 3,
+      "noCn": 0,
+      "dup": 15
+    },
+    {
+      "publisher": "外研版",
+      "grade": "九年级上",
+      "count": 363,
+      "units": 9,
+      "long": 6,
+      "noCn": 3,
+      "dup": 3
+    },
+    {
+      "publisher": "科普版",
+      "grade": "七年级下",
+      "count": 357,
+      "units": 3,
+      "long": 20,
+      "noCn": 19,
+      "dup": 2
+    },
+    {
+      "publisher": "译林版",
+      "grade": "八年级上",
+      "count": 356,
+      "units": 8,
+      "long": 4,
+      "noCn": 0,
+      "dup": 5
+    },
+    {
+      "publisher": "译林版",
+      "grade": "七年级下",
+      "count": 348,
+      "units": 8,
+      "long": 5,
+      "noCn": 0,
+      "dup": 11
+    },
+    {
+      "publisher": "沪外教版",
+      "grade": "七年级上",
+      "count": 347,
+      "units": 8,
+      "long": 21,
+      "noCn": 14,
+      "dup": 11
+    },
+    {
+      "publisher": "人教版",
+      "grade": "七年级上",
+      "count": 336,
+      "units": 8,
+      "long": 3,
+      "noCn": 23,
+      "dup": 0
+    },
+    {
+      "publisher": "译林版",
+      "grade": "八年级下",
+      "count": 335,
+      "units": 8,
+      "long": 9,
+      "noCn": 0,
+      "dup": 7
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "count": 327,
+      "units": 7,
+      "long": 3,
+      "noCn": 9,
+      "dup": 2
+    },
+    {
+      "publisher": "沪教版",
+      "grade": "九年级下",
+      "count": 322,
+      "units": 6,
+      "long": 15,
+      "noCn": 0,
+      "dup": 142
+    },
+    {
+      "publisher": "沪外教版",
+      "grade": "七年级下",
+      "count": 307,
+      "units": 8,
+      "long": 7,
+      "noCn": 12,
+      "dup": 10
+    },
+    {
+      "publisher": "科普版",
+      "grade": "九年级下",
+      "count": 301,
+      "units": 2,
+      "long": 9,
+      "noCn": 6,
+      "dup": 0
+    },
+    {
+      "publisher": "沪外教版",
+      "grade": "九年级上",
+      "count": 298,
+      "units": 6,
+      "long": 14,
+      "noCn": 12,
+      "dup": 10
+    },
+    {
+      "publisher": "沪外教版",
+      "grade": "九年级下",
+      "count": 296,
+      "units": 6,
+      "long": 12,
+      "noCn": 12,
+      "dup": 11
+    },
+    {
+      "publisher": "外研版",
+      "grade": "七年级上",
+      "count": 294,
+      "units": 5,
+      "long": 4,
+      "noCn": 4,
+      "dup": 1
+    },
+    {
+      "publisher": "冀教版",
+      "grade": "七年级上",
+      "count": 290,
+      "units": 8,
+      "long": 0,
+      "noCn": 3,
+      "dup": 0
+    },
+    {
+      "publisher": "教科版",
+      "grade": "七年级上",
+      "count": 290,
+      "units": 8,
+      "long": 0,
+      "noCn": 3,
+      "dup": 0
+    },
+    {
+      "publisher": "外研版",
+      "grade": "七年级下",
+      "count": 289,
+      "units": 5,
+      "long": 2,
+      "noCn": 3,
+      "dup": 5
+    },
+    {
+      "publisher": "译林版",
+      "grade": "九年级上",
+      "count": 276,
+      "units": 9,
+      "long": 13,
+      "noCn": 0,
+      "dup": 6
+    },
+    {
+      "publisher": "冀教版",
+      "grade": "七年级下",
+      "count": 268,
+      "units": 8,
+      "long": 0,
+      "noCn": 1,
+      "dup": 0
+    },
+    {
+      "publisher": "教科版",
+      "grade": "七年级下",
+      "count": 265,
+      "units": 8,
+      "long": 0,
+      "noCn": 1,
+      "dup": 0
+    },
+    {
+      "publisher": "沪外教版",
+      "grade": "八年级上",
+      "count": 262,
+      "units": 8,
+      "long": 13,
+      "noCn": 13,
+      "dup": 8
+    },
+    {
+      "publisher": "外研版",
+      "grade": "八年级上",
+      "count": 253,
+      "units": 6,
+      "long": 2,
+      "noCn": 2,
+      "dup": 1
+    },
+    {
+      "publisher": "北师大版",
+      "grade": "八年级下",
+      "count": 252,
+      "units": 9,
+      "long": 4,
+      "noCn": 9,
+      "dup": 8
+    },
+    {
+      "publisher": "沪外教版",
+      "grade": "八年级下",
+      "count": 232,
+      "units": 8,
+      "long": 7,
+      "noCn": 12,
+      "dup": 10
+    },
+    {
+      "publisher": "外研版",
+      "grade": "八年级下",
+      "count": 228,
+      "units": 6,
+      "long": 18,
+      "noCn": 2,
+      "dup": 0
+    },
+    {
+      "publisher": "科普版",
+      "grade": "七年级上",
+      "count": 197,
+      "units": 6,
+      "long": 21,
+      "noCn": 17,
+      "dup": 5
+    },
+    {
+      "publisher": "外研版",
+      "grade": "九年级下",
+      "count": 123,
+      "units": 8,
+      "long": 1,
+      "noCn": 0,
+      "dup": 1
+    },
+    {
+      "publisher": "译林版",
+      "grade": "九年级下",
+      "count": 123,
+      "units": 5,
+      "long": 3,
+      "noCn": 0,
+      "dup": 4
+    }
+  ]
+}

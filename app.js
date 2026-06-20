@@ -137,13 +137,27 @@ let coverMap = {};
 // 「听」页自动发音去重：记录最近一次已自动播放的单词 id。
 let lastAutoSpoken = "";
 
+const DEMO_MODE = new URLSearchParams(window.location.search).get("demo") === "1";
+
 const app = document.querySelector("#app");
 if (state.progress.plan?.bookId) state.selectedBookId = state.progress.plan.bookId;
-if (new URLSearchParams(window.location.search).get("demo") === "1") seedDemoProgress();
 loadRealWordbook();
 loadCoverMap();
-initAuth();
+// demo 模式：自建演示会话（绕过登录），否则走正常鉴权。
+if (DEMO_MODE) startDemoSession();
+else initAuth();
 warmVoices();
+
+// 启动一次干净的演示：内置演示账号 + 重置并播种演示进度，便于「重新跑演示」。
+function startDemoSession() {
+  state.auth.ready = true;
+  state.auth.demoMode = true;
+  state.auth.backendOnline = false;
+  state.auth.user = { id: "demo-user", name: "演示同学", email: "demo@local" };
+  state.auth.token = "demo";
+  seedDemoProgress();
+  render();
+}
 
 function w(word, cn, part, grade, unit, uk, us, chunks, phonics, example, exampleCn) {
   return {
@@ -170,6 +184,8 @@ async function loadRealWordbook() {
     const officialWords = flattenWordbook(data);
     if (!officialWords.length) return;
     vocabulary = [...vocabulary, ...officialWords];
+    // 真实词库到位后，按真实词重新播种演示进度，保证词条 id 与书本一致。
+    if (DEMO_MODE) seedDemoProgress();
     render();
   } catch {
     // Static demo still works when the real wordbook file is unavailable.
@@ -579,8 +595,27 @@ function resetLearningProgress() {
   render();
 }
 
+// 选一本词量最充足的六三制书做演示（书本 id 含学制段，需动态匹配）。
+function pickDemoBook() {
+  const candidates = books.filter((item) => item.system === "六三制");
+  let best = candidates[0] || books[0];
+  let bestCount = wordsForBook(best).length;
+  for (const item of candidates) {
+    const count = wordsForBook(item).length;
+    if (count > bestCount) {
+      best = item;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
 function seedDemoProgress() {
-  const bookId = "外研版-八年级上";
+  const book = pickDemoBook();
+  const bookId = book.id;
+  // 用书本实际词表选词，保证与 selectedWords 一致（真实词库未到位时回退到内置词）。
+  const demoWords = wordsForBook(book);
+  if (demoWords.length < 3) return;
   const demoPlan = {
     bookId,
     dailyCount: 2,
@@ -588,12 +623,11 @@ function seedDemoProgress() {
     createdAt: todayKey(),
     demo: true
   };
-  const demoWords = vocabulary.filter((item) => item.grade === "八年级上");
   const assigned = demoWords.slice(0, 2).map((word) => word.id);
   const intervals = [1, 2, 4, 7, 15, 30];
   const records = {};
   demoWords.slice(2, 8).forEach((word, index) => {
-    const learnedAt = addDays(todayKey(), -intervals[index]);
+    const learnedAt = addDays(todayKey(), -intervals[index % intervals.length]);
     records[word.id] = {
       learned: true,
       firstLearned: learnedAt,
@@ -834,6 +868,7 @@ function renderBrandPanel() {
           <button class="secondary-btn" data-action="showTasks" type="button" disabled>今日任务</button>
         `}
         <button class="secondary-btn codex-entry" data-action="showCodex" type="button">⭐ 学神图鉴</button>
+        ${DEMO_MODE ? `<button class="secondary-btn" data-action="restartDemo" type="button">🔄 重新演示</button>` : ""}
         <button class="ghost-btn" data-action="resetProgress" type="button">清空学习记录</button>
       </div>
     </aside>
@@ -1428,7 +1463,7 @@ function renderLearnStep(word) {
       <button class="mode-btn ${mode === "phonics" ? "active" : ""}" data-studymode="phonics" type="button">自然拼读</button>
     </div>
     <hr class="divider" />
-    ${mode === "split"
+    ${mode === "split" && word.phonics.length
       ? `<div class="chip-row">${word.phonics.map((sound, index) => `<span class="sound-chip ${index === 0 ? "active" : ""}">${sound}</span>`).join("")}</div>`
       : phonicsChunks(word)}
     ${renderRootCard(word)}
@@ -1463,7 +1498,9 @@ function renderReadStep(word) {
 }
 
 function renderTranslateStep(word) {
-  const options = shuffle([word, ...shuffle(selectedWords().filter((item) => item.id !== word.id)).slice(0, 2)]);
+  // 干扰项必须有中文释义，避免出现空白选项。
+  const pool = selectedWords().filter((item) => item.id !== word.id && (item.cn || "").trim());
+  const options = shuffle([word, ...shuffle(pool).slice(0, 2)]);
   return `
     ${renderWordDisplay(word)}
     <hr class="divider" />
@@ -1684,6 +1721,12 @@ function handleAction(button) {
   }
   if (action === "resetProgress") {
     resetLearningProgress();
+  }
+  if (action === "restartDemo") {
+    state.session = null;
+    seedDemoProgress();
+    resetExerciseState();
+    render();
   }
   if (action === "startTask") startTask(button.dataset.task);
   if (action === "showWordList") toggleWordList();

@@ -149,31 +149,17 @@ async function loadRealWordbook() {
   }
 }
 
-// 加载官方教材清单，构建「版本-册次 → 封面图」映射，供单词书卡片展示书封面。
+// 加载本地封面映射（「版本-册次 → 本地封面图路径」）。
+// 封面图已下载到 data/covers/，避免官方 CDN 防盗链（带站点 referer 会 403）。
 async function loadCoverMap() {
   try {
-    const response = await fetch("data/official-smartedu-junior-english-teachingmaterials.json", { cache: "no-store" });
+    const response = await fetch("data/wordbook-covers.json", { cache: "no-store" });
     if (!response.ok) return;
-    const data = await response.json();
-    const volume = { "上册": "上", "下册": "下", "全一册": "全一册" };
-    const map = {};
-    for (const item of data.items || []) {
-      if (!item.thumbnail) continue;
-      const publisher = normalizePublisher(item.publisher);
-      const grade = `${item.grade}${volume[item.volume] ?? (item.volume || "")}`;
-      map[`${publisher}-${grade}`] = item.thumbnail;
-    }
-    coverMap = map;
+    coverMap = await response.json();
     render();
   } catch {
     // 封面缺失时卡片回退到文字占位封面。
   }
-}
-
-// 教材清单里的版本名与应用内版本名做对齐。
-function normalizePublisher(name) {
-  const alias = { "外研社版": "外研版" };
-  return alias[name] || name;
 }
 
 function coverFor(book) {

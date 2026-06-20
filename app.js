@@ -700,6 +700,34 @@ function renderAuth() {
   `;
 }
 
+// 学神星 IP 吉祥物：引用 index.html 中的共享 SVG 符号
+function starMascot(size = 96, extraClass = "") {
+  return `<svg class="ip-star ${extraClass}" width="${size}" height="${size}" aria-hidden="true"><use href="#ip-star" xlink:href="#ip-star"></use></svg>`;
+}
+
+// 学神等级：把已掌握词量映射为 R / SR / SSR 三阶成长，驱动养成动力
+function studyLevel() {
+  const learned = selectedWords().filter((word) => state.progress.records[word.id]?.learned).length;
+  let rank = "R";
+  let name = "见习学神";
+  let floor = 0;
+  let ceil = 100;
+  if (learned >= 300) {
+    rank = "SSR";
+    name = "超级学神";
+    floor = 300;
+    ceil = Math.ceil((learned + 1) / 100) * 100;
+  } else if (learned >= 100) {
+    rank = "SR";
+    name = "进阶学神";
+    floor = 100;
+    ceil = 300;
+  }
+  const progress = ceil > floor ? Math.min(100, Math.round(((learned - floor) / (ceil - floor)) * 100)) : 100;
+  const remain = Math.max(0, ceil - learned);
+  return { rank, name, learned, floor, ceil, progress, remain };
+}
+
 function renderBrandPanel() {
   const total = selectedWords().length;
   const learned = selectedWords().filter((word) => state.progress.records[word.id]?.learned).length;
@@ -709,9 +737,21 @@ function renderBrandPanel() {
       <div class="eyebrow">Junior English Vocabulary</div>
       <h1>初中词汇<br />超级单词表</h1>
       <p>覆盖初中主流教材与册次词书选择，支持每日计划和艾宾浩斯复习推荐。</p>
+      ${(() => {
+        const lv = studyLevel();
+        return `
+      <div class="level-card">
+        ${starMascot(58)}
+        <div class="level-meta">
+          <strong>${lv.name} · ${lv.rank}</strong>
+          <div class="level-bar"><i style="width:${lv.progress}%"></i></div>
+          <span>${lv.rank === "SSR" ? `已掌握 ${lv.learned} 词 · 学神满阶 ✨` : `距下一阶还差 ${lv.remain} 词`}</span>
+        </div>
+      </div>`;
+      })()}
       <div class="stat-grid">
         <div class="stat"><strong>${total}</strong><span>本书词汇</span></div>
-        <div class="stat"><strong>${learned}</strong><span>已学</span></div>
+        <div class="stat gold"><strong>${learned}</strong><span>已掌握</span></div>
         <div class="stat"><strong>${due}</strong><span>待复习</span></div>
       </div>
       <div class="account-card">
@@ -810,7 +850,7 @@ function renderSetup() {
             <p>设置每日新学数量，复习由艾宾浩斯曲线自动推荐。</p>
           </div>
         </div>
-        ${imported ? "" : `<p class="plan-hint">请先在「选择单词书」中导入词表，导入后才能保存计划。</p>`}
+        ${selectedCount > 0 ? "" : `<p class="plan-hint">当前册次暂无可用词表，请在「选择单词书」中换一本。</p>`}
         <div class="range-row">
           <input id="dailyCount" type="range" min="2" max="20" step="1" value="${plan.dailyCount}" />
           <div class="daily-number" id="dailyCountText">${plan.dailyCount}</div>
@@ -829,7 +869,7 @@ function renderSetup() {
           `).join("")}
         </div>
         <div class="button-row">
-          <button class="primary-btn" data-action="savePlan" type="button" ${imported ? "" : "disabled"}>保存计划并生成今日任务</button>
+          <button class="primary-btn" data-action="savePlan" type="button" ${selectedCount > 0 ? "" : "disabled"}>保存计划并生成今日任务</button>
           <button class="secondary-btn" data-action="selectAllSteps" type="button">七步全选</button>
         </div>
       </div>`;
@@ -1087,8 +1127,9 @@ function renderWordDisplay(word) {
 function renderListenStep(word) {
   return `
     <div class="teacher-stage">
+      <span class="stage-rank">★ ${studyLevel().rank} 学神领读</span>
       <div>
-        <div class="teacher-avatar">AI</div>
+        ${starMascot(118, "teacher-star")}
         <p style="margin-top:12px;font-weight:900">发音模式 1</p>
       </div>
     </div>
@@ -1121,8 +1162,9 @@ function renderLearnStep(word) {
 function renderReadStep(word) {
   return `
     <div class="teacher-stage">
+      <span class="stage-rank">★ ${studyLevel().rank} 学神领读</span>
       <div>
-        <div class="teacher-avatar">领</div>
+        ${starMascot(118, "teacher-star")}
         <p style="margin-top:12px;font-weight:900">真人领读 · 跟读模式</p>
       </div>
     </div>
@@ -1481,7 +1523,15 @@ function togglePlanStep(stepId) {
 
 function savePlan() {
   const dailyInput = document.querySelector("#dailyCount");
-  if (!state.progress.importedBooks[state.selectedBookId]) return;
+  const book = books.find((item) => item.id === state.selectedBookId) || books[0];
+  if (wordsForBook(book).length === 0) return;
+  // 未单独导入时，保存计划即自动导入该册词表，避免按钮被卡住。
+  if (!state.progress.importedBooks[state.selectedBookId]) {
+    state.progress.importedBooks[state.selectedBookId] = {
+      importedAt: todayKey(),
+      count: wordsForBook(book).length
+    };
+  }
   ensureDraftPlan();
   state.progress.plan.bookId = state.selectedBookId;
   state.progress.plan.dailyCount = Number(dailyInput?.value || state.progress.plan.dailyCount || 4);

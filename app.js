@@ -119,6 +119,8 @@ const state = {
   pickedTileIndices: [],
   status: "",
   statusType: "",
+  wordbookIndexReady: false,
+  loadingBookId: "",
   choiceAnswered: false,
   progress: loadProgress(),
   auth: {
@@ -137,6 +139,10 @@ const state = {
 
 // 版本+册次 → 官方教材封面缩略图 URL，异步从教材清单加载后填充。
 let coverMap = {};
+let wordbookIndex = { books: [] };
+let wordbookIndexMap = new Map();
+const loadedBookIds = new Set();
+const loadingBookPromises = new Map();
 // 「听」页自动发音去重：记录最近一次已自动播放的单词 id。
 let lastAutoSpoken = "";
 
@@ -144,7 +150,7 @@ const DEMO_MODE = new URLSearchParams(window.location.search).get("demo") === "1
 
 const app = document.querySelector("#app");
 if (state.progress.plan?.bookId) state.selectedBookId = state.progress.plan.bookId;
-loadRealWordbook();
+loadWordbookIndex();
 loadCoverMap();
 // demo 模式：自建演示会话（绕过登录），否则走正常鉴权。
 if (DEMO_MODE) startDemoSession();
@@ -179,7 +185,25 @@ function w(word, cn, part, grade, unit, uk, us, chunks, phonics, example, exampl
   };
 }
 
-async function loadRealWordbook() {
+async function loadWordbookIndex() {
+  try {
+    const response = await fetch("data/books-index.json", { cache: "no-store" });
+    if (!response.ok) throw new Error("books-index unavailable");
+    const data = await response.json();
+    wordbookIndex = data;
+    wordbookIndexMap = new Map((data.books || []).map((book) => [`${book.publisher}-${book.grade}`, book]));
+    state.wordbookIndexReady = true;
+    const selected = selectedBook();
+    if (!bookIndexRecord(selected)) pickFirstIndexedBook();
+    await ensureBookLoaded(selectedBook());
+    if (DEMO_MODE) seedDemoProgress();
+    render();
+  } catch {
+    await loadLegacyRealWordbook();
+  }
+}
+
+async function loadLegacyRealWordbook() {
   try {
     const response = await fetch("data/wordbooks.real.json", { cache: "no-store" });
     if (!response.ok) return;
@@ -187,12 +211,52 @@ async function loadRealWordbook() {
     const officialWords = flattenWordbook(data);
     if (!officialWords.length) return;
     vocabulary = [...vocabulary, ...officialWords];
-    // 真实词库到位后，按真实词重新播种演示进度，保证词条 id 与书本一致。
+    state.wordbookIndexReady = true;
     if (DEMO_MODE) seedDemoProgress();
     render();
   } catch {
-    // Static demo still works when the real wordbook file is unavailable.
+    // Static demo still works when the real wordbook files are unavailable.
   }
+}
+
+function bookIndexRecord(book) {
+  return wordbookIndexMap.get(`${book.publisher}-${book.grade}`) || null;
+}
+
+function pickFirstIndexedBook() {
+  const first = books.find((book) => bookIndexRecord(book));
+  if (first) {
+    state.selectedBookId = first.id;
+    state.systemFilter = first.system;
+    state.gradeFilter = first.grade;
+    state.publisherFilter = first.publisher;
+  }
+}
+
+async function ensureBookLoaded(book) {
+  const record = bookIndexRecord(book);
+  if (!record) return false;
+  if (loadedBookIds.has(book.id)) return true;
+  if (loadingBookPromises.has(book.id)) return loadingBookPromises.get(book.id);
+  const promise = loadBookWords(book, record).finally(() => {
+    loadingBookPromises.delete(book.id);
+    if (state.loadingBookId === book.id) state.loadingBookId = "";
+  });
+  loadingBookPromises.set(book.id, promise);
+  return promise;
+}
+
+async function loadBookWords(book, record) {
+  state.loadingBookId = book.id;
+  render();
+  const response = await fetch(record.path, { cache: "no-store" });
+  if (!response.ok) throw new Error("book unavailable");
+  const data = await response.json();
+  const officialWords = flattenWordbook(data);
+  vocabulary = vocabulary.filter((item) => !(item.publisher === book.publisher && item.grade === book.grade));
+  vocabulary = [...vocabulary, ...officialWords];
+  loadedBookIds.add(book.id);
+  return true;
 }
 
 // 加载本地封面映射（「版本-册次 → 本地封面图路径」）。
@@ -702,9 +766,9 @@ function resetLearningProgress() {
 function pickDemoBook() {
   const candidates = books.filter((item) => item.system === "六三制");
   let best = candidates[0] || books[0];
-  let bestCount = wordsForBook(best).length;
+  let bestCount = wordCountForBook(best);
   for (const item of candidates) {
-    const count = wordsForBook(item).length;
+    const count = wordCountForBook(item);
     if (count > bestCount) {
       best = item;
       bestCount = count;
@@ -715,6 +779,12 @@ function pickDemoBook() {
 
 function seedDemoProgress() {
   const book = pickDemoBook();
+  if (bookIndexRecord(book) && !loadedBookIds.has(book.id)) {
+    ensureBookLoaded(book).then(() => {
+      if (DEMO_MODE) seedDemoProgress();
+    }).catch(() => {});
+    return;
+  }
   const bookId = book.id;
   // 用书本实际词表选词，保证与 selectedWords 一致（真实词库未到位时回退到内置词）。
   const demoWords = wordsForBook(book);
@@ -801,9 +871,23 @@ function wordsForBook(book) {
   return vocabulary.filter((item) => !item.publisher && item.grade === book.grade);
 }
 
+function wordCountForBook(book) {
+  const loadedWords = vocabulary.filter((item) => item.publisher === book.publisher && item.grade === book.grade);
+  if (loadedWords.length) return loadedWords.length;
+  return bookIndexRecord(book)?.wordCount || vocabulary.filter((item) => !item.publisher && item.grade === book.grade).length;
+}
+
+function hasBookWords(book) {
+  return wordCountForBook(book) > 0;
+}
+
 // 仅返回词库中实际存在词条的版本，按主版本列表顺序排列。
 // 真实词表异步加载完成前回退到完整版本列表，避免下拉为空。
 function availablePublishers() {
+  if (wordbookIndex.books?.length) {
+    const present = new Set(wordbookIndex.books.map((item) => item.publisher));
+    return publishers.filter((publisher) => present.has(publisher));
+  }
   const present = new Set(vocabulary.filter((item) => item.publisher).map((item) => item.publisher));
   const inLibrary = publishers.filter((publisher) => present.has(publisher));
   return inLibrary.length ? inLibrary : publishers;
@@ -985,7 +1069,7 @@ function renderSetup() {
     const matchGrade = state.gradeFilter === "全部" || book.grade === state.gradeFilter;
     const inLibrary = libraryPublishers.has(book.publisher);
     const matchPublisher = state.publisherFilter === "全部" || book.publisher === state.publisherFilter;
-    return matchSystem && matchGrade && inLibrary && matchPublisher;
+    return matchSystem && matchGrade && inLibrary && matchPublisher && hasBookWords(book);
   });
   const plan = currentPlan() || {
     bookId: state.selectedBookId,
@@ -993,8 +1077,9 @@ function renderSetup() {
     steps: STEP_DEFS.map((step) => step.id)
   };
   const selected = books.find((book) => book.id === state.selectedBookId) || books[0];
-  const selectedCount = wordsForBook(selected).length;
+  const selectedCount = wordCountForBook(selected);
   const imported = state.progress.importedBooks[state.selectedBookId];
+  const loadingSelected = state.loadingBookId === state.selectedBookId;
   const activeTab = state.setupTab === "plan" ? "plan" : "book";
   const bookPanel = `
       <div class="section-head">
@@ -1018,10 +1103,10 @@ function renderSetup() {
       <div class="import-card ${imported ? "is-imported" : ""}">
         <div>
           <strong>${imported ? "✓ 词表已导入" : "导入本书词表"}</strong>
-          <p>${selected.title} · 可导入 ${selectedCount} 个核心词 · ${imported ? `导入时间 ${imported.importedAt}` : "导入后才能生成学习计划"}</p>
+          <p>${selected.title} · 可导入 ${selectedCount} 个核心词 · ${loadingSelected ? "正在加载词表" : (imported ? `导入时间 ${imported.importedAt}` : "导入后才能生成学习计划")}</p>
         </div>
-        <button class="${imported ? "import-done-btn" : "primary-btn"}" data-action="importBook" type="button">
-          ${imported ? "重新导入" : "导入"}
+        <button class="${imported ? "import-done-btn" : "primary-btn"}" data-action="importBook" type="button" ${loadingSelected ? "disabled" : ""}>
+          ${loadingSelected ? "加载中" : (imported ? "重新导入" : "导入")}
         </button>
       </div>
 
@@ -1837,6 +1922,10 @@ app.addEventListener("click", (event) => {
   if (bookButton) {
     state.selectedBookId = bookButton.dataset.book;
     render();
+    ensureBookLoaded(selectedBook()).then(() => render()).catch(() => {
+      setStatus("词表加载失败，请稍后重试。", "error");
+      render();
+    });
     return;
   }
   if (stepToggle) {
@@ -2064,9 +2153,10 @@ function togglePlanStep(stepId) {
   saveProgress();
 }
 
-function savePlan() {
+async function savePlan() {
   const dailyInput = document.querySelector("#dailyCount");
   const book = books.find((item) => item.id === state.selectedBookId) || books[0];
+  await ensureBookLoaded(book).catch(() => false);
   if (wordsForBook(book).length === 0) return;
   // 未单独导入时，保存计划即自动导入该册词表，避免按钮被卡住。
   if (!state.progress.importedBooks[state.selectedBookId]) {
@@ -2089,8 +2179,14 @@ function savePlan() {
   render();
 }
 
-function importBook() {
+async function importBook() {
   const book = books.find((item) => item.id === state.selectedBookId) || books[0];
+  const ok = await ensureBookLoaded(book).catch(() => false);
+  if (!ok && wordsForBook(book).length === 0) {
+    setStatus("词表加载失败，请稍后重试。", "error");
+    render();
+    return;
+  }
   state.progress.importedBooks[state.selectedBookId] = {
     importedAt: todayKey(),
     count: wordsForBook(book).length

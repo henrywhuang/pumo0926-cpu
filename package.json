@@ -9,6 +9,7 @@
     "pronunciation:build": "node tools/build-pronunciation-master.mjs",
     "phonics:build": "node tools/build-phonics-master.mjs",
     "pronunciation:apply": "node tools/apply-pronunciation-and-phonics.mjs",
-    "pronunciation:validate": "node tools/validate-pronunciation-and-phonics.mjs"
+    "pronunciation:validate": "node tools/validate-pronunciation-and-phonics.mjs",
+    "wordbooks:split": "node tools/split-wordbooks-by-book.mjs"
   }
 }

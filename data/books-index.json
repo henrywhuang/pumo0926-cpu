@@ -1,0 +1,385 @@
+{
+  "generatedAt": "2026-06-28T06:49:55.843Z",
+  "sourceFile": "data/wordbooks.real.json",
+  "schema": "wordbooks-index.v1",
+  "totalBooks": 47,
+  "totalWords": 16908,
+  "books": [
+    {
+      "id": "北师大版-七年级上",
+      "publisher": "北师大版",
+      "grade": "七年级上",
+      "unitCount": 7,
+      "wordCount": 318,
+      "path": "data/books/book-001.json"
+    },
+    {
+      "id": "北师大版-七年级下",
+      "publisher": "北师大版",
+      "grade": "七年级下",
+      "unitCount": 9,
+      "wordCount": 410,
+      "path": "data/books/book-002.json"
+    },
+    {
+      "id": "北师大版-八年级上",
+      "publisher": "北师大版",
+      "grade": "八年级上",
+      "unitCount": 9,
+      "wordCount": 389,
+      "path": "data/books/book-003.json"
+    },
+    {
+      "id": "北师大版-八年级下",
+      "publisher": "北师大版",
+      "grade": "八年级下",
+      "unitCount": 9,
+      "wordCount": 240,
+      "path": "data/books/book-004.json"
+    },
+    {
+      "id": "北师大版-九年级全一册",
+      "publisher": "北师大版",
+      "grade": "九年级全一册",
+      "unitCount": 18,
+      "wordCount": 521,
+      "path": "data/books/book-005.json"
+    },
+    {
+      "id": "沪教版-七年级上",
+      "publisher": "沪教版",
+      "grade": "七年级上",
+      "unitCount": 9,
+      "wordCount": 601,
+      "path": "data/books/book-006.json"
+    },
+    {
+      "id": "沪教版-七年级下",
+      "publisher": "沪教版",
+      "grade": "七年级下",
+      "unitCount": 9,
+      "wordCount": 536,
+      "path": "data/books/book-007.json"
+    },
+    {
+      "id": "沪教版-八年级上",
+      "publisher": "沪教版",
+      "grade": "八年级上",
+      "unitCount": 9,
+      "wordCount": 477,
+      "path": "data/books/book-008.json"
+    },
+    {
+      "id": "沪教版-八年级下",
+      "publisher": "沪教版",
+      "grade": "八年级下",
+      "unitCount": 9,
+      "wordCount": 440,
+      "path": "data/books/book-009.json"
+    },
+    {
+      "id": "沪教版-九年级上",
+      "publisher": "沪教版",
+      "grade": "九年级上",
+      "unitCount": 8,
+      "wordCount": 420,
+      "path": "data/books/book-010.json"
+    },
+    {
+      "id": "沪教版-九年级下",
+      "publisher": "沪教版",
+      "grade": "九年级下",
+      "unitCount": 6,
+      "wordCount": 321,
+      "path": "data/books/book-011.json"
+    },
+    {
+      "id": "沪外教版-七年级上",
+      "publisher": "沪外教版",
+      "grade": "七年级上",
+      "unitCount": 8,
+      "wordCount": 331,
+      "path": "data/books/book-012.json"
+    },
+    {
+      "id": "沪外教版-七年级下",
+      "publisher": "沪外教版",
+      "grade": "七年级下",
+      "unitCount": 8,
+      "wordCount": 290,
+      "path": "data/books/book-013.json"
+    },
+    {
+      "id": "沪外教版-八年级上",
+      "publisher": "沪外教版",
+      "grade": "八年级上",
+      "unitCount": 8,
+      "wordCount": 246,
+      "path": "data/books/book-014.json"
+    },
+    {
+      "id": "沪外教版-八年级下",
+      "publisher": "沪外教版",
+      "grade": "八年级下",
+      "unitCount": 8,
+      "wordCount": 215,
+      "path": "data/books/book-015.json"
+    },
+    {
+      "id": "沪外教版-九年级上",
+      "publisher": "沪外教版",
+      "grade": "九年级上",
+      "unitCount": 6,
+      "wordCount": 292,
+      "path": "data/books/book-016.json"
+    },
+    {
+      "id": "沪外教版-九年级下",
+      "publisher": "沪外教版",
+      "grade": "九年级下",
+      "unitCount": 6,
+      "wordCount": 290,
+      "path": "data/books/book-017.json"
+    },
+    {
+      "id": "冀教版-七年级上",
+      "publisher": "冀教版",
+      "grade": "七年级上",
+      "unitCount": 8,
+      "wordCount": 290,
+      "path": "data/books/book-018.json"
+    },
+    {
+      "id": "冀教版-七年级下",
+      "publisher": "冀教版",
+      "grade": "七年级下",
+      "unitCount": 8,
+      "wordCount": 268,
+      "path": "data/books/book-019.json"
+    },
+    {
+      "id": "冀教版-八年级上",
+      "publisher": "冀教版",
+      "grade": "八年级上",
+      "unitCount": 8,
+      "wordCount": 399,
+      "path": "data/books/book-020.json"
+    },
+    {
+      "id": "冀教版-八年级下",
+      "publisher": "冀教版",
+      "grade": "八年级下",
+      "unitCount": 8,
+      "wordCount": 412,
+      "path": "data/books/book-021.json"
+    },
+    {
+      "id": "冀教版-九年级全一册",
+      "publisher": "冀教版",
+      "grade": "九年级全一册",
+      "unitCount": 9,
+      "wordCount": 446,
+      "path": "data/books/book-022.json"
+    },
+    {
+      "id": "教科版-七年级上",
+      "publisher": "教科版",
+      "grade": "七年级上",
+      "unitCount": 8,
+      "wordCount": 290,
+      "path": "data/books/book-023.json"
+    },
+    {
+      "id": "教科版-七年级下",
+      "publisher": "教科版",
+      "grade": "七年级下",
+      "unitCount": 8,
+      "wordCount": 265,
+      "path": "data/books/book-024.json"
+    },
+    {
+      "id": "科普版-七年级上",
+      "publisher": "科普版",
+      "grade": "七年级上",
+      "unitCount": 6,
+      "wordCount": 173,
+      "path": "data/books/book-025.json"
+    },
+    {
+      "id": "科普版-七年级下",
+      "publisher": "科普版",
+      "grade": "七年级下",
+      "unitCount": 3,
+      "wordCount": 334,
+      "path": "data/books/book-026.json"
+    },
+    {
+      "id": "科普版-八年级上",
+      "publisher": "科普版",
+      "grade": "八年级上",
+      "unitCount": 6,
+      "wordCount": 503,
+      "path": "data/books/book-027.json"
+    },
+    {
+      "id": "科普版-八年级下",
+      "publisher": "科普版",
+      "grade": "八年级下",
+      "unitCount": 3,
+      "wordCount": 384,
+      "path": "data/books/book-028.json"
+    },
+    {
+      "id": "科普版-九年级上",
+      "publisher": "科普版",
+      "grade": "九年级上",
+      "unitCount": 4,
+      "wordCount": 528,
+      "path": "data/books/book-029.json"
+    },
+    {
+      "id": "科普版-九年级下",
+      "publisher": "科普版",
+      "grade": "九年级下",
+      "unitCount": 2,
+      "wordCount": 297,
+      "path": "data/books/book-030.json"
+    },
+    {
+      "id": "人教版-七年级上",
+      "publisher": "人教版",
+      "grade": "七年级上",
+      "unitCount": 8,
+      "wordCount": 332,
+      "path": "data/books/book-031.json"
+    },
+    {
+      "id": "人教版-七年级下",
+      "publisher": "人教版",
+      "grade": "七年级下",
+      "unitCount": 8,
+      "wordCount": 457,
+      "path": "data/books/book-032.json"
+    },
+    {
+      "id": "人教版-八年级上",
+      "publisher": "人教版",
+      "grade": "八年级上",
+      "unitCount": 8,
+      "wordCount": 544,
+      "path": "data/books/book-033.json"
+    },
+    {
+      "id": "人教版-八年级下",
+      "publisher": "人教版",
+      "grade": "八年级下",
+      "unitCount": 8,
+      "wordCount": 599,
+      "path": "data/books/book-034.json"
+    },
+    {
+      "id": "人教版-九年级全一册",
+      "publisher": "人教版",
+      "grade": "九年级全一册",
+      "unitCount": 9,
+      "wordCount": 684,
+      "path": "data/books/book-035.json"
+    },
+    {
+      "id": "外研版-七年级上",
+      "publisher": "外研版",
+      "grade": "七年级上",
+      "unitCount": 5,
+      "wordCount": 289,
+      "path": "data/books/book-036.json"
+    },
+    {
+      "id": "外研版-七年级下",
+      "publisher": "外研版",
+      "grade": "七年级下",
+      "unitCount": 5,
+      "wordCount": 286,
+      "path": "data/books/book-037.json"
+    },
+    {
+      "id": "外研版-八年级上",
+      "publisher": "外研版",
+      "grade": "八年级上",
+      "unitCount": 6,
+      "wordCount": 251,
+      "path": "data/books/book-038.json"
+    },
+    {
+      "id": "外研版-八年级下",
+      "publisher": "外研版",
+      "grade": "八年级下",
+      "unitCount": 6,
+      "wordCount": 227,
+      "path": "data/books/book-039.json"
+    },
+    {
+      "id": "外研版-九年级上",
+      "publisher": "外研版",
+      "grade": "九年级上",
+      "unitCount": 9,
+      "wordCount": 363,
+      "path": "data/books/book-040.json"
+    },
+    {
+      "id": "外研版-九年级下",
+      "publisher": "外研版",
+      "grade": "九年级下",
+      "unitCount": 8,
+      "wordCount": 123,
+      "path": "data/books/book-041.json"
+    },
+    {
+      "id": "译林版-七年级上",
+      "publisher": "译林版",
+      "grade": "七年级上",
+      "unitCount": 8,
+      "wordCount": 389,
+      "path": "data/books/book-042.json"
+    },
+    {
+      "id": "译林版-七年级下",
+      "publisher": "译林版",
+      "grade": "七年级下",
+      "unitCount": 8,
+      "wordCount": 348,
+      "path": "data/books/book-043.json"
+    },
+    {
+      "id": "译林版-八年级上",
+      "publisher": "译林版",
+      "grade": "八年级上",
+      "unitCount": 8,
+      "wordCount": 356,
+      "path": "data/books/book-044.json"
+    },
+    {
+      "id": "译林版-八年级下",
+      "publisher": "译林版",
+      "grade": "八年级下",
+      "unitCount": 8,
+      "wordCount": 335,
+      "path": "data/books/book-045.json"
+    },
+    {
+      "id": "译林版-九年级上",
+      "publisher": "译林版",
+      "grade": "九年级上",
+      "unitCount": 9,
+      "wordCount": 276,
+      "path": "data/books/book-046.json"
+    },
+    {
+      "id": "译林版-九年级下",
+      "publisher": "译林版",
+      "grade": "九年级下",
+      "unitCount": 5,
+      "wordCount": 123,
+      "path": "data/books/book-047.json"
+    }
+  ]
+}

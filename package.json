@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "pronunciation:build": "node tools/build-pronunciation-master.mjs",
+    "phonics:build": "node tools/build-phonics-master.mjs",
+    "pronunciation:apply": "node tools/apply-pronunciation-and-phonics.mjs",
+    "pronunciation:validate": "node tools/validate-pronunciation-and-phonics.mjs"
   }
 }

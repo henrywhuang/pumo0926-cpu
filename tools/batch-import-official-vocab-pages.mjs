@@ -185,7 +185,7 @@ function pushEntry(rows, book, page, entry) {
     phonetic_us: parsed.phonetic,
     part: parsed.part,
     cn: parsed.cn,
-    chunks: makeChunks(parsed.word),
+    chunks: "",
     phonics: "",
     example: "",
     example_cn: "",
@@ -420,12 +420,6 @@ function shouldSkip(text) {
 
 function cleanText(text) {
   return text.replace(/\s+/g, " ").trim();
-}
-
-function makeChunks(word) {
-  if (!/^[A-Za-z][A-Za-z'-]*$/.test(word)) return "";
-  const chunks = word.match(/[bcdfghjklmnpqrstvwxyz]*[aeiouy]+[bcdfghjklmnpqrstvwxyz]*/gi);
-  return chunks?.length ? chunks.join("|") : word;
 }
 
 function dedupeRows(rows) {

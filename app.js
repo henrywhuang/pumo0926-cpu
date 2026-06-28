@@ -512,11 +512,14 @@ function flattenWordbook(data) {
             word: item.word,
             cn: item.cn,
             part: item.part,
-            uk: item.phonetic?.uk || "",
-            us: item.phonetic?.us || item.phonetic?.uk || "",
-            // 始终按音节节奏重算词块（数据自带的旧词块拆分有误，弃用）。
-            chunks: splitWordIntoChunks(item.word),
-            phonics: item.phonics || [],
+            uk: displayablePhonetic(item.phonetic?.uk),
+            us: displayablePhonetic(item.phonetic?.us || item.phonetic?.uk),
+            phoneticStatus: normalizedStatus(item.phoneticStatus || item.pronunciationStatus),
+            phoneticSource: item.phoneticSource || item.pronunciationSource || "",
+            chunks: safePhonics(item).chunks,
+            phonics: safePhonics(item).phonics,
+            phonicsReady: safePhonics(item).ready,
+            phonicsStatus: safePhonics(item).status,
             example: item.example || "",
             exampleCn: item.exampleCn || ""
           });
@@ -525,6 +528,48 @@ function flattenWordbook(data) {
     }
   }
   return result;
+}
+
+function normalizedStatus(status) {
+  return String(status || "needs_review").trim().toLowerCase().replace(/\s+/g, "_");
+}
+
+function isApprovedStatus(status) {
+  return ["ok", "verified", "reviewed"].includes(normalizedStatus(status));
+}
+
+function displayablePhonetic(ipa) {
+  const text = String(ipa || "").trim();
+  if (!text) return "";
+  if (!/^\/[^/]{1,60}\/$/.test(text)) return "";
+  if (/[A-Z0-9_{}[\]\\]/.test(text)) return "";
+  return text;
+}
+
+function normalizedLetters(text) {
+  return String(text || "").toLowerCase().replace(/[^a-z]/g, "");
+}
+
+function safeList(value) {
+  return Array.isArray(value)
+    ? value.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+}
+
+function safePhonics(item) {
+  const word = item.word || "";
+  const chunks = safeList(item.chunks);
+  const phonics = safeList(item.phonics);
+  const status = normalizedStatus(item.phonicsStatus);
+  const joinsToWord = normalizedLetters(chunks.join("")) === normalizedLetters(word);
+  const hasAlignedSounds = chunks.length > 0 && chunks.length === phonics.length;
+  const ready = isApprovedStatus(status) && joinsToWord && hasAlignedSounds;
+  return {
+    ready,
+    status,
+    chunks: ready ? chunks.map((chunk) => chunk.toLowerCase()) : [word],
+    phonics: ready ? phonics : []
+  };
 }
 
 // 按英语音节节奏拆分单词（用于拆分发音/词块拼读）。
@@ -992,7 +1037,7 @@ function renderSetup() {
             <div class="book-card-body">
               <strong>${book.title}</strong>
               <span>${book.subtitle} · ${book.units} 个单元</span>
-              <span>英式 IPA + 美式 IPA · 七步学练</span>
+              <span>音标校验流程 · 七步学练</span>
             </div>
           </button>
         `;
@@ -1354,13 +1399,19 @@ function wordGrid(word) {
 // 英/美口音小切换 + 当前口音音标（可选麦克风跟读）
 function phoneticRow(word, withMic = false) {
   const ipa = state.accent === "uk" ? word.uk : word.us;
+  const pending = !ipa || !isApprovedStatus(word.phoneticStatus);
+  const label = state.accent === "uk" ? "英式发音音标" : "美式发音音标";
   return `
     <div class="accent-mini">
       <button class="accent-dot ${state.accent === "uk" ? "active" : ""}" data-accent="uk" type="button">英</button>
       <button class="accent-dot ${state.accent === "us" ? "active" : ""}" data-accent="us" type="button">美</button>
     </div>
     <div class="phonetic-row">
-      <button class="phonetic-pill" data-action="playWord" type="button">${ipa || ""} <span class="spk">🔊</span></button>
+      <button class="phonetic-pill ${pending ? "pending" : ""}" data-action="playWord" type="button">
+        <span class="phonetic-label">${label}</span>
+        <span>${pending ? "待校验" : ipa}</span>
+        <span class="spk">🔊</span>
+      </button>
       ${withMic ? `<button class="mic-btn" data-action="record" type="button" aria-label="跟读">🎤</button>` : ""}
     </div>
   `;
@@ -1369,6 +1420,16 @@ function phoneticRow(word, withMic = false) {
 // 彩色音块：自然拼读用 word.chunks 上色，拆分发音用 word.phonics 音素
 const CHUNK_COLORS = ["#2f6df0", "#e0564f", "#2aa86a", "#8a5cf0", "#e08a1e"];
 function phonicsChunks(word) {
+  if (!word.phonicsReady) {
+    return `
+      <div class="phonics-pending">
+        <strong>自然拼读待校验</strong>
+        <p>本词暂不展示自动拆分，先按完整单词听读，避免错误切块。</p>
+      </div>
+      <div class="button-row" style="justify-content:center;margin-top:16px">
+        <button class="primary-btn" data-action="playWord" type="button">🔊 完整发音</button>
+      </div>`;
+  }
   return `
     <div class="phonics-chunks" id="phonicsChunks">
       ${word.chunks.map((chunk, i) => `
@@ -1386,6 +1447,11 @@ function phonicsChunks(word) {
 
 // 自然拼读：逐个音块发音并高亮，最后合成整词。
 function playPhonicsBlend(word) {
+  if (!word.phonicsReady) {
+    setStatus("自然拼读待校验，已改为播放完整单词。");
+    speak(word.word, 0.92);
+    return;
+  }
   const chunks = word.chunks?.length ? word.chunks : [word.word];
   const gap = 820;
   setStatus(`自然拼读：${chunks.join(" - ")} → ${word.word}`, "success");
@@ -1599,6 +1665,20 @@ function renderTranslateStep(word) {
 }
 
 function renderSplitStep(word) {
+  if (!word.phonicsReady) {
+    return `
+      ${renderWordDisplay(word)}
+      <div class="meaning-line">${word.part} ${word.cn}</div>
+      <div class="button-row" style="justify-content:center;margin-top:18px">
+        <button class="primary-btn" data-action="playWord" type="button">完整发音</button>
+      </div>
+      <hr class="divider" />
+      <div class="phonics-pending">
+        <strong>拆分发音待校验</strong>
+        <p>本词暂不展示自动拆分，避免错误拆分影响学习。</p>
+      </div>
+    `;
+  }
   return `
     ${renderWordDisplay(word)}
     <div class="meaning-line">${word.part} ${word.cn}</div>
@@ -1618,6 +1698,20 @@ function renderSplitStep(word) {
 }
 
 function renderSpellReadStep(word) {
+  if (!word.phonicsReady) {
+    return `
+      <div class="chunk-word"><span>${escapeHtml(word.word)}</span></div>
+      <div class="meaning-line">${word.part} ${word.cn}</div>
+      <hr class="divider" />
+      <div class="phonics-pending">
+        <strong>拼读拆分待校验</strong>
+        <p>本词先按整词认读，校验后再开放词块排序练习。</p>
+      </div>
+      <div class="button-row" style="justify-content:center;margin-top:22px">
+        <button class="primary-btn" data-action="playWord" type="button">🔊 完整发音</button>
+      </div>
+    `;
+  }
   const slots = word.chunks.map((chunk, index) => `<span class="slot ${state.pickedChunks[index] ? "" : "empty"}">${state.pickedChunks[index] || chunk}</span>`).join("");
   const options = shuffle(word.chunks.map((chunk, index) => ({ chunk, id: `${chunk}-${index}` })));
   return `
@@ -2167,6 +2261,10 @@ function chooseTranslation(button) {
 
 function pickChunk(chunk) {
   const word = currentWord();
+  if (!word.phonicsReady) {
+    setStatus("本词拼读拆分待校验，暂不进行词块排序。");
+    return;
+  }
   if (state.pickedChunks.length >= word.chunks.length) return;
   state.pickedChunks.push(chunk);
   const answer = state.pickedChunks.join("");
@@ -2285,6 +2383,11 @@ function speak(text, rate = 0.86) {
 }
 
 function playChunks(word) {
+  if (!word.phonicsReady) {
+    setStatus("拆分发音待校验，已改为播放完整单词。");
+    speak(word.word, 0.92);
+    return;
+  }
   setStatus(`拆分发音：${word.chunks.join(" · ")}`);
   word.chunks.forEach((chunk, index) => {
     setTimeout(() => speak(chunk, 0.72), index * 850);
